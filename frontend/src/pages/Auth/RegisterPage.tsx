@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Card, Form, Input, Typography, message } from 'antd';
@@ -17,8 +17,9 @@ type FormData = z.infer<typeof schema>;
 export function RegisterPage() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { email: '', password: '', displayName: '' },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -38,13 +39,25 @@ export function RegisterPage() {
         <Typography.Title level={3}>Create Account</Typography.Title>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Form.Item label="Display Name" validateStatus={errors.displayName ? 'error' : ''} help={errors.displayName?.message}>
-            <Input {...register('displayName')} placeholder="Your name" />
+            <Controller
+              name="displayName"
+              control={control}
+              render={({ field }) => <Input {...field} placeholder="Your name" />}
+            />
           </Form.Item>
           <Form.Item label="Email" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
-            <Input {...register('email')} type="email" placeholder="you@example.com" />
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => <Input {...field} type="email" placeholder="you@example.com" />}
+            />
           </Form.Item>
           <Form.Item label="Password" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
-            <Input.Password {...register('password')} placeholder="At least 8 characters" />
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => <Input.Password {...field} placeholder="At least 8 characters" />}
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" block loading={isSubmitting}>Register</Button>
         </form>

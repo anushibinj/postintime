@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Card, Form, Input, Typography, message } from 'antd';
@@ -16,8 +16,9 @@ type FormData = z.infer<typeof schema>;
 export function LoginPage() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -38,10 +39,18 @@ export function LoginPage() {
         <Typography.Paragraph type="secondary">Sign in to your account</Typography.Paragraph>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Form.Item label="Email" validateStatus={errors.email ? 'error' : ''} help={errors.email?.message}>
-            <Input {...register('email')} type="email" placeholder="you@example.com" />
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => <Input {...field} type="email" placeholder="you@example.com" />}
+            />
           </Form.Item>
           <Form.Item label="Password" validateStatus={errors.password ? 'error' : ''} help={errors.password?.message}>
-            <Input.Password {...register('password')} placeholder="Password" />
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => <Input.Password {...field} placeholder="Password" />}
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" block loading={isSubmitting}>Sign In</Button>
         </form>
