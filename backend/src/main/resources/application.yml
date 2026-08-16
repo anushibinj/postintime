@@ -3,8 +3,8 @@ spring:
     name: postintime
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/postintime}
-    username: ${DATABASE_USERNAME:app}
-    password: ${DATABASE_PASSWORD:change-me}
+    username: ${DATABASE_USERNAME:testuser}
+    password: ${DATABASE_PASSWORD:testpass}
   jpa:
     hibernate:
       ddl-auto: validate
