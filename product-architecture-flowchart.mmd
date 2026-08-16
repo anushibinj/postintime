@@ -1,0 +1,45 @@
+flowchart TB
+    subgraph Client["Frontend (React + Vite)"]
+        UI[PostInTime UI]
+        Router[React Router]
+        Query[TanStack Query]
+        UI --> Router
+        UI --> Query
+    end
+
+    subgraph API["Backend (Spring Boot)"]
+        Auth[Auth Module]
+        Channels[Channel Module]
+        Posts[Post Module]
+        Media[Media Module]
+        Social[Social Account Module]
+        Publishing[Publishing Module]
+        Auth --> Channels
+        Channels --> Posts
+        Channels --> Social
+        Posts --> Publishing
+        Social --> Publishing
+        Media --> Posts
+    end
+
+    subgraph Data["Data Layer"]
+        PG[(PostgreSQL)]
+        Storage[(Object Storage / MinIO)]
+    end
+
+    Query -->|REST /api/v1| Auth
+    Channels --> PG
+    Posts --> PG
+    Social --> PG
+    Publishing --> PG
+    Media --> Storage
+    Media --> PG
+
+    subgraph Future["Future Publishing"]
+        Manual[ManualSocialMediaPublisher]
+        LinkedIn[LinkedInPublisher]
+        Instagram[InstagramPublisher]
+        Publishing --> Manual
+        Publishing -.-> LinkedIn
+        Publishing -.-> Instagram
+    end

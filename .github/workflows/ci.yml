@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postintime
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: change-me
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d postintime"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run backend tests
+        working-directory: backend
+        run: mvn clean test
+        env:
+          DATABASE_URL: jdbc:postgresql://localhost:5432/postintime
+          DATABASE_USERNAME: app
+          DATABASE_PASSWORD: change-me
+          JWT_SECRET: ci-test-secret-key-must-be-long-enough-for-hmac
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install and test frontend
+        working-directory: frontend
+        run: |
+          pnpm install
+          pnpm lint
+          pnpm test
+          pnpm build
