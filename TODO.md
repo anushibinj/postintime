@@ -21,5 +21,5 @@
 - [x] When inside a channel, I don't want the huge cards showing the number of posts and social accounts. Make them single-line and small. Place the "Manage social accounts" button at the end of the channel title row.
 - [x] The posts in the Channel should appear as a list. The image should be a small square preview in the beginning of the list. And each item in the list should show the title of the post, a small preview of the caption, and whether the post was published or not in its respective channels.
 - [x] Add borders to each item in the list of Posts
-- [ ] Add a button to collapse/expand the left pane
+- [x] Add a button to collapse/expand the left pane
 - [ ] Rewamp the Post edit/create page to make it more UX friendly. Right now it looks like a basic form.
