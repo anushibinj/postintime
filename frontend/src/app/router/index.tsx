@@ -7,7 +7,6 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from '../../pages/Auth/LoginPage';
 import { RegisterPage } from '../../pages/Auth/RegisterPage';
 import { AppLayout } from '../../components/AppLayout/AppLayout';
-import { DashboardPage } from '../../pages/Dashboard/DashboardPage';
 import { ChannelsPage } from '../../pages/Channels/ChannelsPage';
 import { ChannelDetailPage } from '../../pages/Channels/ChannelDetailPage';
 import { PostListPage } from '../../pages/Posts/PostListPage';
@@ -36,7 +35,7 @@ export function AppRouter() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route element={<ProtectedRoute />}>
                   <Route element={<AppLayout />}>
-                    <Route index element={<DashboardPage />} />
+                    <Route index element={<Navigate to="/channels" replace />} />
                     <Route path="channels" element={<ChannelsPage />} />
                     <Route path="channels/:channelId" element={<ChannelDetailPage />} />
                     <Route path="channels/:channelId/posts" element={<PostListPage />} />
@@ -47,7 +46,7 @@ export function AppRouter() {
                     <Route path="settings" element={<SettingsPage />} />
                   </Route>
                 </Route>
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/channels" replace />} />
               </Routes>
             </BrowserRouter>
             </ChannelProvider>
