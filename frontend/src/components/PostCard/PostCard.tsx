@@ -16,8 +16,11 @@ export function PostCard({ post, channelId }: { post: Post; channelId: string })
       style={{
         display: 'flex',
         gap: 12,
-        padding: '12px 0',
-        borderBottom: '1px solid #f0f0f0',
+        padding: 12,
+        marginBottom: 8,
+        border: '1px solid #e8e8e8',
+        borderRadius: 8,
+        background: '#fff',
         cursor: 'pointer',
         alignItems: 'flex-start',
       }}
