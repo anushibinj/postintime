@@ -1,4 +1,4 @@
-import { Button, Form, Input, Modal, Space, Switch, Table, Typography, message } from 'antd';
+import { Button, Card, Col, Empty, Form, Input, Modal, Row, Space, Switch, Tag, Typography, message } from 'antd';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -59,40 +59,52 @@ export function ChannelsPage() {
         <Button type="primary" icon={<Plus size={16} />} onClick={openCreate}>New Channel</Button>
       </Space>
 
-      <Table
-        loading={isLoading}
-        dataSource={channels}
-        rowKey="id"
-        columns={[
-          { title: 'Name', dataIndex: 'name', key: 'name' },
-          { title: 'Slug', dataIndex: 'slug', key: 'slug' },
-          { title: 'Posts', dataIndex: 'postCount', key: 'postCount' },
-          { title: 'Social Accounts', dataIndex: 'socialAccountCount', key: 'socialAccountCount' },
-          {
-            title: 'Enabled',
-            dataIndex: 'enabled',
-            key: 'enabled',
-            render: (enabled: boolean) => (enabled ? 'Yes' : 'No'),
-          },
-          {
-            title: 'Actions',
-            key: 'actions',
-            render: (_, record) => (
-              <Space>
-                <Button size="small" onClick={() => navigate(`/channels/${record.id}`)}>View</Button>
-                <Button size="small" onClick={() => openEdit(record)}>Edit</Button>
-                <Button size="small" danger onClick={() => {
-                  Modal.confirm({
-                    title: 'Delete channel?',
-                    content: 'This will delete all posts and social accounts in this channel.',
-                    onOk: () => deleteMutation.mutate(record.id),
-                  });
-                }}>Delete</Button>
-              </Space>
-            ),
-          },
-        ]}
-      />
+      {isLoading ? (
+        <Typography.Text>Loading...</Typography.Text>
+      ) : channels.length === 0 ? (
+        <Empty description="No channels yet">
+          <Button type="primary" onClick={openCreate}>Create Channel</Button>
+        </Empty>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {channels.map((channel) => (
+            <Col key={channel.id} xs={24} sm={12} lg={8}>
+              <Card
+                styles={{ body: { display: 'flex', flexDirection: 'column', minHeight: 180 } }}
+              >
+                <div style={{ flex: 1 }}>
+                  <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Typography.Title level={4} style={{ margin: 0 }}>{channel.name}</Typography.Title>
+                    <Tag color={channel.enabled ? 'green' : 'default'}>
+                      {channel.enabled ? 'Enabled' : 'Disabled'}
+                    </Tag>
+                  </Space>
+                  <Typography.Text type="secondary">/{channel.slug}</Typography.Text>
+                  {channel.description && (
+                    <Typography.Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ marginTop: 8, marginBottom: 0 }}>
+                      {channel.description}
+                    </Typography.Paragraph>
+                  )}
+                  <Typography.Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0 }}>
+                    {channel.postCount} posts · {channel.socialAccountCount} social accounts
+                  </Typography.Paragraph>
+                </div>
+                <Space style={{ marginTop: 16 }}>
+                  <Button size="small" onClick={() => navigate(`/channels/${channel.id}`)}>View</Button>
+                  <Button size="small" onClick={() => openEdit(channel)}>Edit</Button>
+                  <Button size="small" danger onClick={() => {
+                    Modal.confirm({
+                      title: 'Delete channel?',
+                      content: 'This will delete all posts and social accounts in this channel.',
+                      onOk: () => deleteMutation.mutate(channel.id),
+                    });
+                  }}>Delete</Button>
+                </Space>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
 
       <Modal
         title={editing ? 'Edit Channel' : 'Create Channel'}
