@@ -1,4 +1,5 @@
-import { Button, Card, Form, Input, Radio, Typography, message } from 'antd';
+import { Button, Card, Col, Input, Row, Segmented, Space, Typography, message } from 'antd';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { MediaUploader } from '../../components/MediaUploader/MediaUploader';
@@ -26,9 +27,21 @@ export function PostFormPage() {
     }
   }, [existingPost]);
 
+  const goBack = () => {
+    if (isEdit) {
+      navigate(`/channels/${channelId}/posts/${postId}`);
+    } else {
+      navigate(`/channels/${channelId}`);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (!title.trim()) {
+      message.warning('Add a title before saving');
+      return;
+    }
     try {
-      const data = { title, caption, status, mediaId: media?.id };
+      const data = { title: title.trim(), caption, status, mediaId: media?.id };
       if (isEdit) {
         await updatePost.mutateAsync(data);
         message.success('Post updated');
@@ -43,29 +56,79 @@ export function PostFormPage() {
     }
   };
 
+  const saving = createPost.isPending || updatePost.isPending;
+
   return (
-    <Card>
-      <Typography.Title level={3}>{isEdit ? 'Edit Post' : 'Create Post'}</Typography.Title>
-      <Form layout="vertical" onFinish={handleSubmit}>
-        <Form.Item label="Title" required>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        </Form.Item>
-        <Form.Item label="Caption">
-          <Input.TextArea rows={4} value={caption} onChange={(e) => setCaption(e.target.value)} />
-        </Form.Item>
-        <Form.Item label="Image">
-          <MediaUploader value={media} onChange={setMedia} />
-        </Form.Item>
-        <Form.Item label="Status">
-          <Radio.Group value={status} onChange={(e) => setStatus(e.target.value)}>
-            <Radio value="draft">Draft</Radio>
-            <Radio value="ready">Ready</Radio>
-          </Radio.Group>
-        </Form.Item>
-        <Button type="primary" htmlType="submit" loading={createPost.isPending || updatePost.isPending}>
-          Save Post
-        </Button>
-      </Form>
-    </Card>
+    <div>
+      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 24 }} align="start">
+        <Space align="start">
+          <Button type="text" icon={<ArrowLeft size={16} />} onClick={goBack} />
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              {isEdit ? 'Edit post' : 'New post'}
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              {isEdit ? 'Update the image, caption, and status.' : 'Add media and write the caption you will publish.'}
+            </Typography.Text>
+          </div>
+        </Space>
+        <Space>
+          <Button onClick={goBack}>Cancel</Button>
+          <Button type="primary" onClick={handleSubmit} loading={saving} disabled={!title.trim()}>
+            {isEdit ? 'Save changes' : 'Create post'}
+          </Button>
+        </Space>
+      </Space>
+
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={10}>
+          <Card title="Image" styles={{ body: { minHeight: 280 } }}>
+            <MediaUploader value={media} onChange={setMedia} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={14}>
+          <Card>
+            <Typography.Text type="secondary">Title</Typography.Text>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="What is this post about?"
+              size="large"
+              maxLength={200}
+              style={{ marginTop: 8, marginBottom: 24, fontSize: 20, fontWeight: 600 }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Typography.Text type="secondary">Caption</Typography.Text>
+              <Typography.Text type="secondary">{caption.length} characters</Typography.Text>
+            </div>
+            <Input.TextArea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Write the caption you will copy to social accounts..."
+              autoSize={{ minRows: 8, maxRows: 16 }}
+              style={{ marginBottom: 24, fontSize: 15 }}
+            />
+
+            <Typography.Text type="secondary">Status</Typography.Text>
+            <div style={{ marginTop: 8 }}>
+              <Segmented
+                value={status}
+                onChange={(value) => setStatus(value as PostStatus)}
+                options={[
+                  { label: 'Draft', value: 'draft' },
+                  { label: 'Ready', value: 'ready' },
+                ]}
+              />
+              <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+                {status === 'draft'
+                  ? 'Keep working on this post. Drafts are not treated as ready to publish.'
+                  : 'This post is ready. You can add publishing targets and mark them published.'}
+              </Typography.Paragraph>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 }

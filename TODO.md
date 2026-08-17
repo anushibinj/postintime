@@ -22,4 +22,4 @@
 - [x] The posts in the Channel should appear as a list. The image should be a small square preview in the beginning of the list. And each item in the list should show the title of the post, a small preview of the caption, and whether the post was published or not in its respective channels.
 - [x] Add borders to each item in the list of Posts
 - [x] Add a button to collapse/expand the left pane
-- [ ] Rewamp the Post edit/create page to make it more UX friendly. Right now it looks like a basic form.
+- [x] Rewamp the Post edit/create page to make it more UX friendly. Right now it looks like a basic form.
