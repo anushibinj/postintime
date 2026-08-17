@@ -5,9 +5,9 @@ import com.postintime.channel.ChannelService;
 import com.postintime.common.api.PageResponse;
 import com.postintime.common.error.BusinessException;
 import com.postintime.common.error.ResourceNotFoundException;
-import com.postintime.media.Media;
 import com.postintime.media.MediaResponse;
 import com.postintime.media.MediaService;
+import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.TargetStatus;
 import org.springframework.data.domain.Page;
@@ -16,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -111,10 +112,18 @@ public class PostService {
         if (post.getMedia() != null) {
             mediaResponse = MediaResponse.from(post.getMedia(), mediaService.getMediaUrl(post.getMedia()));
         }
-        long total = postTargetRepository.findByPostId(post.getId()).size();
-        long published = postTargetRepository.countByPostIdAndStatus(post.getId(), TargetStatus.PUBLISHED);
-        long pending = postTargetRepository.countByPostIdAndStatus(post.getId(), TargetStatus.PENDING);
-        long failed = postTargetRepository.countByPostIdAndStatus(post.getId(), TargetStatus.FAILED);
+        List<PostTarget> targets = postTargetRepository.findByPostId(post.getId());
+        long total = targets.size();
+        long published = targets.stream().filter(t -> t.getStatus() == TargetStatus.PUBLISHED).count();
+        long pending = targets.stream().filter(t -> t.getStatus() == TargetStatus.PENDING).count();
+        long failed = targets.stream().filter(t -> t.getStatus() == TargetStatus.FAILED).count();
+        List<PostTargetSummary> targetSummaries = targets.stream()
+                .map(t -> new PostTargetSummary(
+                        t.getSocialAccount().getPlatform().name().toLowerCase(),
+                        t.getSocialAccount().getName(),
+                        t.getStatus().name().toLowerCase()
+                ))
+                .toList();
         return new PostResponse(
                 post.getId(),
                 post.getChannel().getId(),
@@ -123,6 +132,7 @@ public class PostService {
                 mediaResponse,
                 post.getStatus().name().toLowerCase(),
                 new PublicationSummaryResponse(total, published, pending, failed),
+                targetSummaries,
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );

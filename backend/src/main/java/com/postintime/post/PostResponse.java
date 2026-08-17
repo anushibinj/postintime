@@ -3,6 +3,7 @@ package com.postintime.post;
 import com.postintime.media.MediaResponse;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record PostResponse(
@@ -13,6 +14,7 @@ public record PostResponse(
         MediaResponse media,
         String status,
         PublicationSummaryResponse publicationSummary,
+        List<PostTargetSummary> targets,
         Instant createdAt,
         Instant updatedAt
 ) {

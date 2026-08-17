@@ -14,7 +14,7 @@ export function ChannelDetailPage() {
     queryFn: () => fetchChannel(channelId!),
     enabled: !!channelId,
   });
-  const { data: postsData } = usePosts(channelId, { size: 5, sort: 'updatedAt,desc' });
+  const { data: postsData } = usePosts(channelId, { size: 20, sort: 'updatedAt,desc' });
 
   if (!channel) return null;
 
@@ -33,7 +33,7 @@ export function ChannelDetailPage() {
         {channel.postCount} posts · {channel.socialAccountCount} social accounts
       </Typography.Text>
 
-      <SpaceBetween title="Recent Posts" channelId={channelId!} />
+      <SpaceBetween title="Posts" channelId={channelId!} />
       <PostList posts={postsData?.items || []} channelId={channelId!} />
     </div>
   );

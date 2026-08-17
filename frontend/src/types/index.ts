@@ -32,6 +32,12 @@ export interface PublicationSummary {
   failed: number;
 }
 
+export interface PostTargetSummary {
+  platform: Platform;
+  name: string;
+  status: TargetStatus;
+}
+
 export interface Post {
   id: string;
   channelId?: string;
@@ -40,6 +46,7 @@ export interface Post {
   media?: MediaInfo;
   status: PostStatus;
   publicationSummary?: PublicationSummary;
+  targets?: PostTargetSummary[];
   createdAt: string;
   updatedAt: string;
 }

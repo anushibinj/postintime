@@ -103,7 +103,8 @@ class PostInTimeIntegrationTest {
         mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + postId)
                         .header("Authorization", "Bearer " + user1Token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.publicationSummary.published").value(1));
+                .andExpect(jsonPath("$.publicationSummary.published").value(1))
+                .andExpect(jsonPath("$.targets.length()").value(2));
     }
 
     @Test
