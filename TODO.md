@@ -26,7 +26,7 @@
 - [x] As soon as my auth token is expired in the frontend, log me out and clear all of the authentication state in the frontend. I should be redirected to the login page instead.
 - [x] Remove the Channel selector dropdown on the top of the page Header.
 - [x] The state of the left sidebar collapsing need to be persisted in localStorage so that it maintains state across page refreshes.
-- [ ] Allow users to create API tokens for themselves. They should be able to send the generated API token to make REST calls to the spring boot backend by providing it as a Bearer token. Allow users to delete tokens, refresh them, set expiry (even infinite expiry) for the API tokens.
+- [x] Allow users to create API tokens for themselves. They should be able to send the generated API token to make REST calls to the spring boot backend by providing it as a Bearer token. Allow users to delete tokens, refresh them, set expiry (even infinite expiry) for the API tokens.
 - [ ] REST API to list all the channels for a given user - Create a GET REST API that will return all the channels and their metadata for the user. Authenticate via API keys.
 - [ ] REST API for creation of posts - Add a new REST API that can be accessible by the public to create new posts for a Channel. Accept whatever input is needed to create a post - the channel ID, post title, caption and media. Authenticate via API keys.
 - [ ] Swagger doc for all the public APIs - Creation of posts and Listing of channels for a user.

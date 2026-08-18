@@ -1,5 +1,6 @@
 package com.postintime.common.security;
 
+import com.postintime.apitoken.ApiTokenService;
 import com.postintime.user.User;
 import com.postintime.user.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -20,10 +21,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+    private final ApiTokenService apiTokenService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
+                                   UserRepository userRepository,
+                                   ApiTokenService apiTokenService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userRepository = userRepository;
+        this.apiTokenService = apiTokenService;
     }
 
     @Override
@@ -33,12 +38,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = authHeader.substring(7);
-            if (jwtTokenProvider.validateToken(token)) {
-                UUID userId = jwtTokenProvider.getUserId(token);
-                userRepository.findById(userId).ifPresent(user -> setAuthentication(request, user));
-            }
+            authenticate(request, token);
         }
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticate(HttpServletRequest request, String token) {
+        if (token.chars().filter(ch -> ch == '.').count() == 2 && jwtTokenProvider.validateToken(token)) {
+            UUID userId = jwtTokenProvider.getUserId(token);
+            userRepository.findById(userId).ifPresent(user -> setAuthentication(request, user));
+            return;
+        }
+        apiTokenService.authenticate(token).ifPresent(user -> setAuthentication(request, user));
     }
 
     private void setAuthentication(HttpServletRequest request, User user) {

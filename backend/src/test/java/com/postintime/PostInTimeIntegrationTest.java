@@ -162,6 +162,58 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.code").value("ACCOUNT_DISABLED"));
     }
 
+    @Test
+    void apiTokenCanAuthenticateRefreshAndBeRevoked() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/v1/api-tokens")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"CLI token\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.expiresAt").value(org.hamcrest.Matchers.nullValue()))
+                .andReturn();
+
+        JsonNode createdBody = objectMapper.readTree(created.getResponse().getContentAsString());
+        String apiToken = createdBody.get("token").asText();
+        UUID tokenId = UUID.fromString(createdBody.get("id").asText());
+
+        mockMvc.perform(get("/api/v1/channels")
+                        .header("Authorization", "Bearer " + apiToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mockMvc.perform(get("/api/v1/api-tokens")
+                        .header("Authorization", "Bearer " + user2Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        MvcResult refreshed = mockMvc.perform(post("/api/v1/api-tokens/" + tokenId + "/refresh")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andReturn();
+        String refreshedToken = objectMapper.readTree(refreshed.getResponse().getContentAsString())
+                .get("token").asText();
+
+        mockMvc.perform(get("/api/v1/channels")
+                        .header("Authorization", "Bearer " + apiToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/channels")
+                        .header("Authorization", "Bearer " + refreshedToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/v1/api-tokens/" + tokenId)
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/channels")
+                        .header("Authorization", "Bearer " + refreshedToken))
+                .andExpect(status().isForbidden());
+    }
+
     private String targetsBody(UUID... accountIds) throws Exception {
         var node = objectMapper.createObjectNode();
         var array = node.putArray("socialAccountIds");

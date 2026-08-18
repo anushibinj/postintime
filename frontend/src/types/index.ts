@@ -3,6 +3,16 @@ export type TargetStatus = 'pending' | 'publishing' | 'published' | 'failed' | '
 export type Platform = 'linkedin' | 'instagram' | 'whatsapp' | 'youtube' | 'x' | 'facebook' | 'threads';
 export type PostingMode = 'manual' | 'api';
 
+export interface ApiToken {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  token?: string | null;
+  expiresAt?: string | null;
+  lastUsedAt?: string | null;
+  createdAt: string;
+}
+
 export interface Channel {
   id: string;
   name: string;

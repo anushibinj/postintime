@@ -67,13 +67,14 @@ See [product-architecture-flowchart.mmd](./product-architecture-flowchart.mmd).
 
 ## API
 
-All APIs are under `/api/v1`. Authentication uses JWT Bearer tokens.
+All APIs are under `/api/v1`. Session login uses JWT Bearer tokens. Personal API tokens (`pit_…`) can also be sent as `Authorization: Bearer <token>`.
 
 ### Key endpoints
 
 | Resource | Endpoints |
 |----------|-----------|
 | Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login` |
+| API tokens | `GET/POST /api/v1/api-tokens`, `PATCH/DELETE /api/v1/api-tokens/{id}`, `POST .../refresh` |
 | Channels | `GET/POST /api/v1/channels`, `GET/PATCH/DELETE /api/v1/channels/{id}` |
 | Posts | `GET/POST /api/v1/channels/{id}/posts`, `GET/PATCH/DELETE .../posts/{postId}` |
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}` |
@@ -89,3 +90,4 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
 - Frontend connects directly to `http://localhost:8080` (no Vite proxy)
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
+- Personal API tokens are created in Settings and used as Bearer tokens for REST access

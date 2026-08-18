@@ -9,12 +9,14 @@ flowchart TB
 
     subgraph API["Backend (Spring Boot)"]
         Auth[Auth Module]
+        ApiTokens[API Token Module]
         Channels[Channel Module]
         Posts[Post Module]
         Media[Media Module]
         Social[Social Account Module]
         Publishing[Publishing Module]
         Auth --> Channels
+        Auth --> ApiTokens
         Channels --> Posts
         Channels --> Social
         Posts --> Publishing
@@ -28,6 +30,7 @@ flowchart TB
     end
 
     Query -->|REST /api/v1| Auth
+    ApiTokens --> PG
     Channels --> PG
     Posts --> PG
     Social --> PG
