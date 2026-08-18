@@ -88,3 +88,4 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - MinIO runs on ports 9000 (API) and 9001 (console)
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
 - Frontend connects directly to `http://localhost:8080` (no Vite proxy)
+- Expired JWT sessions are cleared in the browser and the user is sent to `/login`

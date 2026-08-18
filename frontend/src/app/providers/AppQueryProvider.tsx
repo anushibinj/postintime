@@ -5,7 +5,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 1,
+      retry: (failureCount, error) => {
+        if (error instanceof Error && error.message === 'Session expired') {
+          return false;
+        }
+        return failureCount < 1;
+      },
     },
   },
 });
