@@ -23,3 +23,4 @@
 - [x] Add borders to each item in the list of Posts
 - [x] Add a button to collapse/expand the left pane
 - [x] Rewamp the Post edit/create page to make it more UX friendly. Right now it looks like a basic form.
+- [ ] As soon as my auth token is expired in the frontend, log me out and clear all of the authentication state in the frontend. I should be redirected to the login page instead.
