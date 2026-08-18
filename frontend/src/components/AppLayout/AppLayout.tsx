@@ -10,11 +10,11 @@ export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <AppSider collapsed={collapsed} />
-      <Layout>
-        <AppHeader collapsed={collapsed} onToggleSider={() => setCollapsed((value) => !value)} />
-        <Content style={{ padding: 24, background: '#f5f5f5' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+      <AppSider collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
+      <Layout style={{ overflow: 'hidden' }}>
+        <AppHeader />
+        <Content style={{ padding: 24, background: '#f5f5f5', overflow: 'auto' }}>
           <Outlet />
         </Content>
       </Layout>

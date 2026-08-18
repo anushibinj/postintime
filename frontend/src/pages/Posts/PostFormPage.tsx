@@ -28,11 +28,7 @@ export function PostFormPage() {
   }, [existingPost]);
 
   const goBack = () => {
-    if (isEdit) {
-      navigate(`/channels/${channelId}/posts/${postId}`);
-    } else {
-      navigate(`/channels/${channelId}`);
-    }
+    navigate(`/channels/${channelId}`);
   };
 
   const handleSubmit = async () => {
@@ -60,17 +56,28 @@ export function PostFormPage() {
 
   return (
     <div>
-      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 24 }} align="start">
-        <Space align="start">
-          <Button type="text" icon={<ArrowLeft size={16} />} onClick={goBack} />
-          <div>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              {isEdit ? 'Edit post' : 'New post'}
-            </Typography.Title>
-            <Typography.Text type="secondary">
-              {isEdit ? 'Update the image, caption, and status.' : 'Add media and write the caption you will publish.'}
-            </Typography.Text>
-          </div>
+      <div
+        style={{
+          position: 'sticky',
+          top: -24,
+          zIndex: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          margin: '-24px -24px 24px',
+          padding: '12px 24px',
+          background: '#fff',
+          borderBottom: '1px solid #f0f0f0',
+        }}
+      >
+        <Space>
+          <Button type="text" icon={<ArrowLeft size={16} />} onClick={goBack}>
+            Back to Posts
+          </Button>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {isEdit ? 'Edit post' : 'New post'}
+          </Typography.Title>
         </Space>
         <Space>
           <Button onClick={goBack}>Cancel</Button>
@@ -78,7 +85,11 @@ export function PostFormPage() {
             {isEdit ? 'Save changes' : 'Create post'}
           </Button>
         </Space>
-      </Space>
+      </div>
+
+      <Typography.Paragraph type="secondary" style={{ marginBottom: 24 }}>
+        {isEdit ? 'Update the image, caption, and status.' : 'Add media and write the caption you will publish.'}
+      </Typography.Paragraph>
 
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={10}>

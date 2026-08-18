@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchChannel } from '../../api/channels';
 import { usePosts } from '../../hooks/usePosts';
 import { PostList } from '../../components/PostCard/PostCard';
-import { Plus } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 
 export function ChannelDetailPage() {
   const { channelId } = useParams();
@@ -20,6 +20,14 @@ export function ChannelDetailPage() {
 
   return (
     <div>
+      <Button
+        type="text"
+        icon={<ArrowLeft size={16} />}
+        onClick={() => navigate('/channels')}
+        style={{ paddingLeft: 0, marginBottom: 8 }}
+      >
+        Back to Channels
+      </Button>
       <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <Typography.Title level={2} style={{ margin: 0 }}>{channel.name}</Typography.Title>
         <Button onClick={() => navigate(`/channels/${channelId}/social-accounts`)}>

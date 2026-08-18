@@ -1,5 +1,5 @@
-import { Button, Card, Modal, Space, Typography, message } from 'antd';
-import { Check, Copy, Download, ExternalLink } from 'lucide-react';
+import { Button, Card, Modal, Space, Tooltip, Typography, message } from 'antd';
+import { Check, Copy, Download, ExternalLink, Send } from 'lucide-react';
 import type { Post, PostTarget } from '../../types';
 import { StatusBadge } from '../StatusBadge/StatusBadge';
 import { usePublishingMutations } from '../../hooks/usePublishTarget';
@@ -46,21 +46,36 @@ export function PublishTargetPanel({ target, post, channelId, postId }: PublishT
   };
 
   return (
-    <Card size="small" style={{ marginBottom: 12 }}>
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <Space>
-          <Typography.Text strong>{target.socialAccount.name}</Typography.Text>
-          <StatusBadge status={target.status} />
-        </Space>
-        {target.publishedAt && (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {format(new Date(target.publishedAt), 'MMM d, yyyy h:mm a')}
-          </Typography.Text>
-        )}
-        {target.status === 'pending' && (
-          <Button type="primary" size="small" onClick={handlePublish}>Publish</Button>
-        )}
-      </Space>
+    <Card
+      size="small"
+      style={{ marginBottom: 12 }}
+      actions={
+        target.status === 'pending'
+          ? [
+              <Tooltip title="Publish" key="publish">
+                <span onClick={handlePublish}><Send size={16} /></span>
+              </Tooltip>,
+            ]
+          : undefined
+      }
+    >
+      <Card.Meta
+        title={
+          <Space>
+            <Typography.Text strong>{target.socialAccount.name}</Typography.Text>
+            <StatusBadge status={target.status} />
+          </Space>
+        }
+        description={
+          target.publishedAt ? (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {format(new Date(target.publishedAt), 'MMM d, yyyy h:mm a')}
+            </Typography.Text>
+          ) : (
+            `${target.socialAccount.platform}`
+          )
+        }
+      />
 
       <Modal
         title={`Publish to ${target.socialAccount.name}`}

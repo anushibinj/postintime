@@ -1,5 +1,5 @@
-import { Button, Card, Col, Empty, Form, Input, Modal, Row, Space, Switch, Tag, Typography, message } from 'antd';
-import { Plus } from 'lucide-react';
+import { Button, Card, Col, Empty, Form, Input, Modal, Row, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createChannel, updateChannel, deleteChannel } from '../../api/channels';
@@ -70,36 +70,61 @@ export function ChannelsPage() {
           {channels.map((channel) => (
             <Col key={channel.id} xs={24} sm={12} lg={8}>
               <Card
-                styles={{ body: { display: 'flex', flexDirection: 'column', minHeight: 180 } }}
+                hoverable
+                onClick={() => navigate(`/channels/${channel.id}`)}
+                style={{ cursor: 'pointer' }}
+                actions={[
+                  <Tooltip title="View" key="view">
+                    <span onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/channels/${channel.id}`);
+                    }}><Eye size={16} /></span>
+                  </Tooltip>,
+                  <Tooltip title="Edit" key="edit">
+                    <span onClick={(event) => {
+                      event.stopPropagation();
+                      openEdit(channel);
+                    }}><Pencil size={16} /></span>
+                  </Tooltip>,
+                  <Tooltip title="Delete" key="delete">
+                    <span
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        Modal.confirm({
+                          title: 'Delete channel?',
+                          content: 'This will delete all posts and social accounts in this channel.',
+                          onOk: () => deleteMutation.mutate(channel.id),
+                        });
+                      }}
+                    >
+                      <Trash2 size={16} style={{ color: '#ff4d4f' }} />
+                    </span>
+                  </Tooltip>,
+                ]}
               >
-                <div style={{ flex: 1 }}>
-                  <Space style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Typography.Title level={4} style={{ margin: 0 }}>{channel.name}</Typography.Title>
-                    <Tag color={channel.enabled ? 'green' : 'default'}>
-                      {channel.enabled ? 'Enabled' : 'Disabled'}
-                    </Tag>
-                  </Space>
-                  <Typography.Text type="secondary">/{channel.slug}</Typography.Text>
-                  {channel.description && (
-                    <Typography.Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ marginTop: 8, marginBottom: 0 }}>
-                      {channel.description}
-                    </Typography.Paragraph>
-                  )}
-                  <Typography.Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0 }}>
-                    {channel.postCount} posts · {channel.socialAccountCount} social accounts
-                  </Typography.Paragraph>
-                </div>
-                <Space style={{ marginTop: 16 }}>
-                  <Button size="small" onClick={() => navigate(`/channels/${channel.id}`)}>View</Button>
-                  <Button size="small" onClick={() => openEdit(channel)}>Edit</Button>
-                  <Button size="small" danger onClick={() => {
-                    Modal.confirm({
-                      title: 'Delete channel?',
-                      content: 'This will delete all posts and social accounts in this channel.',
-                      onOk: () => deleteMutation.mutate(channel.id),
-                    });
-                  }}>Delete</Button>
-                </Space>
+                <Card.Meta
+                  title={
+                    <Space>
+                      {channel.name}
+                      <Tag color={channel.enabled ? 'green' : 'default'}>
+                        {channel.enabled ? 'Enabled' : 'Disabled'}
+                      </Tag>
+                    </Space>
+                  }
+                  description={
+                    <>
+                      <Typography.Text type="secondary">/{channel.slug}</Typography.Text>
+                      {channel.description && (
+                        <Typography.Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ marginTop: 8, marginBottom: 0 }}>
+                          {channel.description}
+                        </Typography.Paragraph>
+                      )}
+                      <Typography.Paragraph type="secondary" style={{ marginTop: 12, marginBottom: 0 }}>
+                        {channel.postCount} posts · {channel.socialAccountCount} social accounts
+                      </Typography.Paragraph>
+                    </>
+                  }
+                />
               </Card>
             </Col>
           ))}

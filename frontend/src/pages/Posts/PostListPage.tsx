@@ -1,5 +1,5 @@
 import { Button, Input, Select, Space, Typography } from 'antd';
-import { Plus } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import { usePosts } from '../../hooks/usePosts';
@@ -15,6 +15,14 @@ export function PostListPage() {
 
   return (
     <div>
+      <Button
+        type="text"
+        icon={<ArrowLeft size={16} />}
+        onClick={() => navigate('/channels')}
+        style={{ paddingLeft: 0, marginBottom: 8 }}
+      >
+        Back to Channels
+      </Button>
       <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 24 }}>
         <Typography.Title level={2} style={{ margin: 0 }}>Posts</Typography.Title>
         <Button type="primary" icon={<Plus size={16} />} onClick={() => navigate(`/channels/${channelId}/posts/new`)}>

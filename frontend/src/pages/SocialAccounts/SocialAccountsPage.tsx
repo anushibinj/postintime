@@ -1,6 +1,6 @@
-import { Button, Card, Form, Input, Modal, Select, Space, Typography, message } from 'antd';
-import { Plus } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { Button, Card, Col, Form, Input, Modal, Row, Select, Space, Tooltip, Typography, message } from 'antd';
+import { ArrowLeft, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useSocialAccounts, useSocialAccountMutations } from '../../hooks/useSocialAccounts';
 import type { Platform, SocialAccount } from '../../types';
@@ -17,6 +17,7 @@ const PLATFORMS: { value: Platform; label: string }[] = [
 
 export function SocialAccountsPage() {
   const { channelId } = useParams();
+  const navigate = useNavigate();
   const { data: accounts = [], isLoading } = useSocialAccounts(channelId);
   const mutations = useSocialAccountMutations(channelId!);
   const [modalOpen, setModalOpen] = useState(false);
@@ -52,35 +53,77 @@ export function SocialAccountsPage() {
 
   return (
     <div>
+      <Button
+        type="text"
+        icon={<ArrowLeft size={16} />}
+        onClick={() => navigate(`/channels/${channelId}`)}
+        style={{ paddingLeft: 0, marginBottom: 8 }}
+      >
+        Back to Posts
+      </Button>
       <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 24 }}>
         <Typography.Title level={2} style={{ margin: 0 }}>Social Accounts</Typography.Title>
         <Button type="primary" icon={<Plus size={16} />} onClick={openCreate}>Add Account</Button>
       </Space>
 
-      {isLoading ? <Typography.Text>Loading...</Typography.Text> : accounts.map((account) => (
-        <Card key={account.id} style={{ marginBottom: 16 }}>
-          <Space direction="vertical">
-            <Typography.Text strong>{PLATFORMS.find((p) => p.value === account.platform)?.label || account.platform}</Typography.Text>
-            <Typography.Text>{account.name}</Typography.Text>
-            {account.profileUrl && <Typography.Link href={account.profileUrl} target="_blank">{account.profileUrl}</Typography.Link>}
-            <Typography.Text type="secondary">Manual · {account.enabled ? 'Enabled' : 'Disabled'}</Typography.Text>
-            <Space>
-              <Button size="small" onClick={() => openEdit(account)}>Edit</Button>
-              {account.enabled ? (
-                <Button size="small" onClick={() => mutations.disable.mutate(account.id)}>Disable</Button>
-              ) : (
-                <Button size="small" onClick={() => mutations.enable.mutate(account.id)}>Enable</Button>
-              )}
-              <Button size="small" danger onClick={() => {
-                Modal.confirm({
-                  title: 'Delete account?',
-                  onOk: () => mutations.remove.mutate(account.id),
-                });
-              }}>Delete</Button>
-            </Space>
-          </Space>
-        </Card>
-      ))}
+      {isLoading ? <Typography.Text>Loading...</Typography.Text> : (
+        <Row gutter={[16, 16]}>
+          {accounts.map((account) => (
+            <Col key={account.id} xs={24} sm={12} lg={8}>
+              <Card
+                hoverable
+                actions={[
+                  <Tooltip title="Edit" key="edit">
+                    <span onClick={() => openEdit(account)}><Pencil size={16} /></span>
+                  </Tooltip>,
+                  account.enabled ? (
+                    <Tooltip title="Disable" key="toggle">
+                      <span onClick={() => mutations.disable.mutate(account.id)}><PowerOff size={16} /></span>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Enable" key="toggle">
+                      <span onClick={() => mutations.enable.mutate(account.id)}><Power size={16} /></span>
+                    </Tooltip>
+                  ),
+                  <Tooltip title="Delete" key="delete">
+                    <span
+                      onClick={() => {
+                        Modal.confirm({
+                          title: 'Delete account?',
+                          onOk: () => mutations.remove.mutate(account.id),
+                        });
+                      }}
+                    >
+                      <Trash2 size={16} style={{ color: '#ff4d4f' }} />
+                    </span>
+                  </Tooltip>,
+                ]}
+              >
+                <Card.Meta
+                  title={account.name}
+                  description={
+                    <>
+                      <Typography.Text type="secondary">
+                        {PLATFORMS.find((p) => p.value === account.platform)?.label || account.platform}
+                      </Typography.Text>
+                      {account.profileUrl && (
+                        <div>
+                          <Typography.Link href={account.profileUrl} target="_blank">
+                            {account.profileUrl}
+                          </Typography.Link>
+                        </div>
+                      )}
+                      <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+                        Manual · {account.enabled ? 'Enabled' : 'Disabled'}
+                      </Typography.Paragraph>
+                    </>
+                  }
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
 
       <Modal
         title={editing ? 'Edit Account' : 'Add Account'}
