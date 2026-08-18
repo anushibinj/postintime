@@ -214,6 +214,32 @@ class PostInTimeIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void publicListChannelsRequiresApiTokenAndReturnsMetadata() throws Exception {
+        String apiToken = createApiToken(user1Token, "Public list");
+
+        mockMvc.perform(get("/api/v1/public/channels"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/public/channels")
+                        .header("Authorization", "Bearer " + apiToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.name=='Tech')].slug").exists())
+                .andExpect(jsonPath("$[?(@.name=='Tech')].id").exists())
+                .andExpect(jsonPath("$[?(@.name=='Tech')].enabled").exists())
+                .andExpect(jsonPath("$[?(@.name=='Tech')].postCount").exists())
+                .andExpect(jsonPath("$[?(@.name=='Tech')].socialAccountCount").exists())
+                .andExpect(jsonPath("$[?(@.name=='Tech')].createdAt").exists())
+                .andExpect(jsonPath("$[?(@.name=='Tech')].updatedAt").exists());
+
+        String user2ApiToken = createApiToken(user2Token, "User2 list");
+        mockMvc.perform(get("/api/v1/public/channels")
+                        .header("Authorization", "Bearer " + user2ApiToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     private String targetsBody(UUID... accountIds) throws Exception {
         var node = objectMapper.createObjectNode();
         var array = node.putArray("socialAccountIds");
@@ -254,6 +280,16 @@ class PostInTimeIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText());
+    }
+
+    private String createApiToken(String sessionToken, String name) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/api-tokens")
+                        .header("Authorization", "Bearer " + sessionToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("token").asText();
     }
 
     private UUID createSocialAccount(String token, UUID channelId, String platform, String name) throws Exception {

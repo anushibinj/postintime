@@ -80,6 +80,7 @@ All APIs are under `/api/v1`. Session login uses JWT Bearer tokens. Personal API
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}` |
 | Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` |
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
+| Public | `GET /api/v1/public/channels` (API token) |
 
 ## Environment
 
@@ -91,3 +92,4 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - Frontend connects directly to `http://localhost:8080` (no Vite proxy)
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
+- `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…`)

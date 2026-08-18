@@ -15,8 +15,11 @@ flowchart TB
         Media[Media Module]
         Social[Social Account Module]
         Publishing[Publishing Module]
+        Public[Public API]
         Auth --> Channels
         Auth --> ApiTokens
+        ApiTokens --> Public
+        Public --> Channels
         Channels --> Posts
         Channels --> Social
         Posts --> Publishing
