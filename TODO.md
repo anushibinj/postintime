@@ -25,4 +25,4 @@
 - [x] Rewamp the Post edit/create page to make it more UX friendly. Right now it looks like a basic form.
 - [x] As soon as my auth token is expired in the frontend, log me out and clear all of the authentication state in the frontend. I should be redirected to the login page instead.
 - [x] Remove the Channel selector dropdown on the top of the page Header.
-- [ ] The state of the left sidebar collapsing need to be persisted in localStorage so that it maintains state across page refreshes.
+- [x] The state of the left sidebar collapsing need to be persisted in localStorage so that it maintains state across page refreshes.
