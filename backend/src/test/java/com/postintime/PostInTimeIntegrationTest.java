@@ -199,7 +199,7 @@ class PostInTimeIntegrationTest {
 
         mockMvc.perform(get("/api/v1/channels")
                         .header("Authorization", "Bearer " + apiToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/api/v1/channels")
                         .header("Authorization", "Bearer " + refreshedToken))
@@ -211,7 +211,7 @@ class PostInTimeIntegrationTest {
 
         mockMvc.perform(get("/api/v1/channels")
                         .header("Authorization", "Bearer " + refreshedToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -219,7 +219,17 @@ class PostInTimeIntegrationTest {
         String apiToken = createApiToken(user1Token, "Public list");
 
         mockMvc.perform(get("/api/v1/public/channels"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/public/channels")
+                        .header("Origin", "https://www.postman.com")
+                        .header("Authorization", "bearer " + apiToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mockMvc.perform(get("/api/v1/public/channels")
+                        .header("X-Api-Key", apiToken))
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/v1/public/channels")
                         .header("Authorization", "Bearer " + apiToken))

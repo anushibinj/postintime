@@ -67,7 +67,7 @@ See [product-architecture-flowchart.mmd](./product-architecture-flowchart.mmd).
 
 ## API
 
-All APIs are under `/api/v1`. Session login uses JWT Bearer tokens. Personal API tokens (`pit_…`) can also be sent as `Authorization: Bearer <token>`.
+All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:8080`), not the Vite app. Session login uses JWT Bearer tokens. Personal API tokens (`pit_…`) can also be sent as `Authorization: Bearer <token>` or `X-Api-Key`. Copy the full secret shown when the token is created (the Settings list only shows a prefix). Missing or invalid credentials return **401**.
 
 ### Key endpoints
 
@@ -92,4 +92,5 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - Frontend connects directly to `http://localhost:8080` (no Vite proxy)
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
-- `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…`)
+- `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
+- Call `http://localhost:8080` from Postman (not the Vite origin). CORS allows any Origin for Bearer clients; missing tokens return 401.
