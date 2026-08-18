@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchTargets, createTargets, publishTarget, markPublished, resetTarget } from '../api/publishing';
+import { fetchTargets, createTargets, publishTarget, markPublished, resetTarget, togglePublished as togglePublishedRequest } from '../api/publishing';
 
 export function useTargets(channelId: string | undefined, postId: string | undefined) {
   return useQuery({
@@ -31,6 +31,10 @@ export function usePublishingMutations(channelId: string, postId: string) {
     }),
     reset: useMutation({
       mutationFn: (targetId: string) => resetTarget(channelId, postId, targetId),
+      onSuccess: invalidate,
+    }),
+    togglePublished: useMutation({
+      mutationFn: (socialAccountId: string) => togglePublishedRequest(channelId, postId, socialAccountId),
       onSuccess: invalidate,
     }),
   };

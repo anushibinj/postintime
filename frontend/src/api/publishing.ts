@@ -30,3 +30,10 @@ export async function resetTarget(channelId: string, postId: string, targetId: s
     method: 'POST',
   });
 }
+
+export async function togglePublished(channelId: string, postId: string, socialAccountId: string): Promise<PostTarget> {
+  return apiFetch<PostTarget>(`/api/v1/channels/${channelId}/posts/${postId}/targets/toggle`, {
+    method: 'POST',
+    body: JSON.stringify({ socialAccountId }),
+  });
+}

@@ -105,6 +105,20 @@ class PostInTimeIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.publicationSummary.published").value(1))
                 .andExpect(jsonPath("$.targets.length()").value(2));
+
+        mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + postId + "/targets/toggle")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"socialAccountId\":\"" + linkedinId + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("pending"));
+
+        mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + postId + "/targets/toggle")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"socialAccountId\":\"" + linkedinId + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("published"));
     }
 
     @Test

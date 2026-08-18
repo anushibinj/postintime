@@ -33,6 +33,8 @@ export interface PublicationSummary {
 }
 
 export interface PostTargetSummary {
+  id: string;
+  socialAccountId: string;
   platform: Platform;
   name: string;
   status: TargetStatus;

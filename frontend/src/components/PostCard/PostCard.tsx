@@ -1,14 +1,39 @@
-import { Empty, Tag, Typography } from 'antd';
-import { ImageOff } from 'lucide-react';
+import { Empty, Tooltip, Typography, message } from 'antd';
+import { Check, ImageOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { Post, PostTargetSummary } from '../../types';
-import { StatusBadge } from '../StatusBadge/StatusBadge';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Platform, Post, SocialAccount } from '../../types';
+import { useSocialAccounts } from '../../hooks/useSocialAccounts';
+import { togglePublished } from '../../api/publishing';
 
 const THUMB_SIZE = 64;
+const ICON_SIZE = 36;
 
-export function PostCard({ post, channelId }: { post: Post; channelId: string }) {
+const PLATFORM_COLORS: Record<Platform, string> = {
+  linkedin: '#0a66c2',
+  instagram: '#e4405f',
+  whatsapp: '#25d366',
+  youtube: '#ff0000',
+  x: '#111111',
+  facebook: '#1877f2',
+  threads: '#111111',
+};
+
+export function PostCard({ post, channelId, accounts }: { post: Post; channelId: string; accounts: SocialAccount[] }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const targets = post.targets || [];
+  const enabledAccounts = accounts.filter((account) => account.enabled);
+
+  const toggle = useMutation({
+    mutationFn: (socialAccountId: string) => togglePublished(channelId, post.id, socialAccountId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts', channelId] });
+      queryClient.invalidateQueries({ queryKey: ['post', channelId, post.id] });
+      queryClient.invalidateQueries({ queryKey: ['targets', channelId, post.id] });
+    },
+    onError: () => message.error('Could not update publish status'),
+  });
 
   return (
     <div
@@ -22,7 +47,7 @@ export function PostCard({ post, channelId }: { post: Post; channelId: string })
         borderRadius: 8,
         background: '#fff',
         cursor: 'pointer',
-        alignItems: 'flex-start',
+        alignItems: 'center',
       }}
     >
       <PostThumb url={post.media?.url} title={post.title} />
@@ -31,14 +56,107 @@ export function PostCard({ post, channelId }: { post: Post; channelId: string })
           {post.title}
         </Typography.Title>
         {post.caption && (
-          <Typography.Paragraph type="secondary" ellipsis={{ rows: 1 }} style={{ margin: '4px 0 8px' }}>
+          <Typography.Paragraph type="secondary" ellipsis={{ rows: 1 }} style={{ margin: '4px 0 0' }}>
             {post.caption}
           </Typography.Paragraph>
         )}
-        <TargetStatusRow targets={targets} />
       </div>
+      {enabledAccounts.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+          {enabledAccounts.map((account) => {
+            const target = targets.find((item) => item.socialAccountId === account.id);
+            const posted = target?.status === 'published';
+            return (
+              <AccountToggle
+                key={account.id}
+                account={account}
+                posted={posted}
+                disabled={toggle.isPending}
+                onToggle={() => toggle.mutate(account.id)}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
+}
+
+function AccountToggle({
+  account,
+  posted,
+  disabled,
+  onToggle,
+}: {
+  account: SocialAccount;
+  posted: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  const color = PLATFORM_COLORS[account.platform];
+  return (
+    <Tooltip title={`${account.name} · ${posted ? 'Posted' : 'Not posted'}`}>
+      <button
+        type="button"
+        aria-label={`${posted ? 'Unmark' : 'Mark'} ${account.name} as posted`}
+        aria-pressed={posted}
+        disabled={disabled}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+        style={{
+          position: 'relative',
+          width: ICON_SIZE,
+          height: ICON_SIZE,
+          borderRadius: 8,
+          border: posted ? `1px solid ${color}` : '1px solid #e8e8e8',
+          background: posted ? color : '#f5f5f5',
+          color: posted ? '#fff' : '#8c8c8c',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: disabled ? 'wait' : 'pointer',
+          padding: 0,
+        }}
+      >
+        <PlatformGlyph platform={account.platform} />
+        {posted && (
+          <span
+            style={{
+              position: 'absolute',
+              right: -4,
+              bottom: -4,
+              width: 14,
+              height: 14,
+              borderRadius: '50%',
+              background: '#52c41a',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid #fff',
+            }}
+          >
+            <Check size={8} strokeWidth={3} />
+          </span>
+        )}
+      </button>
+    </Tooltip>
+  );
+}
+
+function PlatformGlyph({ platform }: { platform: Platform }) {
+  const labels: Record<Platform, string> = {
+    linkedin: 'in',
+    instagram: 'IG',
+    whatsapp: 'WA',
+    youtube: 'YT',
+    x: 'X',
+    facebook: 'f',
+    threads: '@',
+  };
+  return <span style={{ fontSize: 12, fontWeight: 700, lineHeight: 1 }}>{labels[platform]}</span>;
 }
 
 function PostThumb({ url, title }: { url?: string; title: string }) {
@@ -76,30 +194,16 @@ function PostThumb({ url, title }: { url?: string; title: string }) {
   );
 }
 
-function TargetStatusRow({ targets }: { targets: PostTargetSummary[] }) {
-  if (targets.length === 0) {
-    return <Typography.Text type="secondary">Not published to any accounts</Typography.Text>;
-  }
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-      {targets.map((target, index) => (
-        <span key={`${target.platform}-${target.name}-${index}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <Tag style={{ margin: 0 }}>{target.name}</Tag>
-          <StatusBadge status={target.status} />
-        </span>
-      ))}
-    </div>
-  );
-}
-
 export function PostList({ posts, channelId }: { posts: Post[]; channelId: string }) {
+  const { data: accounts = [] } = useSocialAccounts(channelId);
+
   if (posts.length === 0) {
     return <Empty description="No posts yet" />;
   }
   return (
     <div>
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} channelId={channelId} />
+        <PostCard key={post.id} post={post} channelId={channelId} accounts={accounts} />
       ))}
     </div>
   );

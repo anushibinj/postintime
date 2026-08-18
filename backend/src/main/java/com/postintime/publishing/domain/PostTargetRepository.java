@@ -15,7 +15,7 @@ public interface PostTargetRepository extends JpaRepository<PostTarget, UUID> {
 
     Optional<PostTarget> findByIdAndPostId(UUID id, UUID postId);
 
-    boolean existsByPostIdAndSocialAccountId(UUID postId, UUID socialAccountId);
+    Optional<PostTarget> findByPostIdAndSocialAccountId(UUID postId, UUID socialAccountId);
 
     long countByPostIdAndStatus(UUID postId, TargetStatus status);
 }

@@ -37,6 +37,13 @@ public class PublishingController {
         return publishingService.createTargets(channelId, postId, request);
     }
 
+    @PostMapping("/toggle")
+    public TargetResponse togglePublished(@PathVariable UUID channelId,
+                                          @PathVariable UUID postId,
+                                          @Valid @RequestBody TogglePublishedRequest request) {
+        return publishingService.togglePublished(channelId, postId, request);
+    }
+
     @PostMapping("/{targetId}/publish")
     public PublishActionResponse publish(@PathVariable UUID channelId,
                                          @PathVariable UUID postId,

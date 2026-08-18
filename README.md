@@ -78,7 +78,7 @@ All APIs are under `/api/v1`. Authentication uses JWT Bearer tokens.
 | Posts | `GET/POST /api/v1/channels/{id}/posts`, `GET/PATCH/DELETE .../posts/{postId}` |
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}` |
 | Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` |
-| Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
+| Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
 
 ## Environment
 

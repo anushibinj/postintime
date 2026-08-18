@@ -10,6 +10,7 @@ import com.postintime.publishing.api.PublishActionResponse;
 import com.postintime.publishing.api.PublishInstructionsResponse;
 import com.postintime.publishing.api.SocialAccountSummary;
 import com.postintime.publishing.api.TargetResponse;
+import com.postintime.publishing.api.TogglePublishedRequest;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.PublishContext;
@@ -70,10 +71,8 @@ public class PublishingService {
         List<TargetResponse> results = new ArrayList<>();
         for (SocialAccount account : accounts) {
             socialAccountService.ensureAccountEnabled(account);
-            if (postTargetRepository.existsByPostIdAndSocialAccountId(post.getId(), account.getId())) {
-                postTargetRepository.findByPostId(post.getId()).stream()
-                        .filter(t -> t.getSocialAccount().getId().equals(account.getId()))
-                        .findFirst()
+            if (postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId()).isPresent()) {
+                postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
                         .ifPresent(t -> results.add(toResponse(t)));
                 continue;
             }
@@ -125,6 +124,28 @@ public class PublishingService {
         target.setErrorCode(null);
         target.setErrorMessage(null);
         return toResponse(postTargetRepository.save(target));
+    }
+
+    @Transactional
+    public TargetResponse togglePublished(UUID channelId, UUID postId, TogglePublishedRequest request) {
+        Post post = postService.getOwnedPost(channelId, postId);
+        SocialAccount account = socialAccountService.getOwnedAccount(channelId, request.socialAccountId());
+        PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
+                .orElse(null);
+
+        if (target != null && target.getStatus() == TargetStatus.PUBLISHED) {
+            return resetTarget(channelId, postId, target.getId());
+        }
+
+        socialAccountService.ensureAccountEnabled(account);
+        if (target == null) {
+            target = new PostTarget();
+            target.setPost(post);
+            target.setSocialAccount(account);
+            target.setPublishingMode(account.getPostingMode());
+            target = postTargetRepository.save(target);
+        }
+        return markPublished(channelId, postId, target.getId(), null);
     }
 
     private PostTarget getOwnedTarget(UUID channelId, UUID postId, UUID targetId) {

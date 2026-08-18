@@ -119,6 +119,8 @@ public class PostService {
         long failed = targets.stream().filter(t -> t.getStatus() == TargetStatus.FAILED).count();
         List<PostTargetSummary> targetSummaries = targets.stream()
                 .map(t -> new PostTargetSummary(
+                        t.getId(),
+                        t.getSocialAccount().getId(),
                         t.getSocialAccount().getPlatform().name().toLowerCase(),
                         t.getSocialAccount().getName(),
                         t.getStatus().name().toLowerCase()
