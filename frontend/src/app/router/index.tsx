@@ -1,7 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { AuthProvider } from '../providers/AuthProvider';
-import { ChannelProvider } from '../providers/ChannelProvider';
 import { AppQueryProvider } from '../providers/AppQueryProvider';
 import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from '../../pages/Auth/LoginPage';
@@ -28,7 +27,6 @@ export function AppRouter() {
       <AntApp>
         <AppQueryProvider>
           <AuthProvider>
-            <ChannelProvider>
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
@@ -49,7 +47,6 @@ export function AppRouter() {
                 <Route path="*" element={<Navigate to="/channels" replace />} />
               </Routes>
             </BrowserRouter>
-            </ChannelProvider>
           </AuthProvider>
         </AppQueryProvider>
       </AntApp>
