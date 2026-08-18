@@ -26,3 +26,4 @@
 - [x] As soon as my auth token is expired in the frontend, log me out and clear all of the authentication state in the frontend. I should be redirected to the login page instead.
 - [x] Remove the Channel selector dropdown on the top of the page Header.
 - [x] The state of the left sidebar collapsing need to be persisted in localStorage so that it maintains state across page refreshes.
+- [ ] Allow users to create API tokens for themselves. They should be able to send the generated API token to make REST calls to the spring boot backend by providing it as a Bearer token. Allow users to delete tokens, refresh them, set expiry (even infinite expiry) for the API tokens.
