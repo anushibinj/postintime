@@ -47,3 +47,13 @@ app:
     secret-key: ${STORAGE_SECRET_KEY:minioadmin}
     bucket: ${STORAGE_BUCKET:postintime}
     region: ${STORAGE_REGION:us-east-1}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  paths-to-match: /api/v1/public/**
+

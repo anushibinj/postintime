@@ -16,12 +16,14 @@ flowchart TB
         Social[Social Account Module]
         Publishing[Publishing Module]
         Public[Public API]
+        Swagger[Swagger UI]
         Auth --> Channels
         Auth --> ApiTokens
         ApiTokens --> Public
         Public --> Channels
         Public --> Posts
         Public --> Media
+        Swagger -.-> Public
         Channels --> Posts
         Channels --> Social
         Posts --> Publishing

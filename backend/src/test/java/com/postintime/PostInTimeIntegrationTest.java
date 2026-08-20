@@ -316,7 +316,19 @@ class PostInTimeIntegrationTest {
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("not json"))
                 .andExpect(status().isUnsupportedMediaType())
-                .andExpect(jsonPath("$.code").value("CONTENT_TYPE_NOT_SUPPORTED"));
+                        .andExpect(jsonPath("$.code").value("CONTENT_TYPE_NOT_SUPPORTED"));
+    }
+
+    @Test
+    void publicApiOpenApiDocsAreAvailableWithoutAuth() throws Exception {
+        mockMvc.perform(get("/v3/api-docs/public"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/public/channels'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/public/channels/{channelId}/posts'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/channels']").doesNotExist());
+
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isOk());
     }
 
     private String targetsBody(UUID... accountIds) throws Exception {

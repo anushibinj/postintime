@@ -82,6 +82,8 @@ All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:808
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
 | Public | `GET /api/v1/public/channels`, `POST /api/v1/public/channels/{channelId}/posts` (API token) |
 
+Public API docs (list channels and create posts): [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). OpenAPI JSON: `/v3/api-docs`. Click **Authorize** and paste a `pit_…` token.
+
 ## Environment
 
 Copy `.env.example` to `.env` and adjust values. For local development:
@@ -94,4 +96,5 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
 - `POST /api/v1/public/channels/{channelId}/posts` creates a post in that channel. JSON body: `{ "title", "caption", "mediaId", "status" }`. Multipart form: `title`, `caption`, `status`, and `media` (image file). Auth is the same API token.
+- Swagger UI for those public APIs: `http://localhost:8080/swagger-ui.html` (OpenAPI at `/v3/api-docs`)
 - Call `http://localhost:8080` from Postman (not the Vite origin). CORS allows any Origin for Bearer clients; missing tokens return 401.
