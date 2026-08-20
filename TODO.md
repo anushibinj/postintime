@@ -30,3 +30,4 @@
 - [x] REST API to list all the channels for a given user - Create a GET REST API that will return all the channels and their metadata for the user. Authenticate via API keys.
 - [x] REST API for creation of posts - Add a new REST API that can be accessible by the public to create new posts for a Channel. Accept whatever input is needed to create a post - the channel ID, post title, caption and media. Authenticate via API keys.
 - [x] Swagger doc for all the public APIs - Creation of posts and Listing of channels for a user.
+- [ ] Integrate this app with n8n to ingest posts into PostInTime.
