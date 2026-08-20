@@ -5,10 +5,14 @@ import com.postintime.common.api.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -27,6 +31,36 @@ public class GlobalExceptionHandler {
                 .toList();
         return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
                 "One or more fields are invalid.", details, request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedContentType(
+            HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Content-Type is not supported.";
+        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "CONTENT_TYPE_NOT_SUPPORTED",
+                message, List.of(), request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "HTTP method is not supported.";
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_SUPPORTED",
+                message, List.of(), request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadableMessage(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                "Request body is missing or invalid.", List.of(), request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingParam(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                ex.getMessage(), List.of(), request);
     }
 
     @ExceptionHandler(BusinessException.class)

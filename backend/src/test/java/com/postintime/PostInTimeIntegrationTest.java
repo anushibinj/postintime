@@ -300,6 +300,25 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.totalItems").value(2));
     }
 
+    @Test
+    void unsupportedContentTypeReturns415Not401() throws Exception {
+        mockMvc.perform(post("/api/v1/media")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.code").value("CONTENT_TYPE_NOT_SUPPORTED"));
+
+        String apiToken = createApiToken(user1Token, "Content type");
+        mockMvc.perform(post("/api/v1/public/channels/" + techChannelId + "/posts")
+                        .header("Authorization", "Bearer " + apiToken)
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("not json"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("CONTENT_TYPE_NOT_SUPPORTED"));
+    }
+
     private String targetsBody(UUID... accountIds) throws Exception {
         var node = objectMapper.createObjectNode();
         var array = node.putArray("socialAccountIds");

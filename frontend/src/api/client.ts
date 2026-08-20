@@ -68,10 +68,14 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   }
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   if (!response.ok) {
-    if (response.status === 401 && !isAuthRequest(path)) {
+    const error = await response.json().catch(() => ({ message: response.statusText })) as {
+      message?: string;
+      code?: string;
+    };
+    const isAuthFailure = error.code === 'AUTH_FAILED' || error.code === 'AUTH_EXPIRED';
+    if (response.status === 401 && !isAuthRequest(path) && isAuthFailure) {
       expireSession();
     }
-    const error = await response.json().catch(() => ({ message: response.statusText }));
     throw new Error(error.message || 'Request failed');
   }
   if (response.status === 204) {
