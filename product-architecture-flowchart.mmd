@@ -20,6 +20,8 @@ flowchart TB
         Auth --> ApiTokens
         ApiTokens --> Public
         Public --> Channels
+        Public --> Posts
+        Public --> Media
         Channels --> Posts
         Channels --> Social
         Posts --> Publishing

@@ -80,7 +80,7 @@ All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:808
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}` |
 | Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` |
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
-| Public | `GET /api/v1/public/channels` (API token) |
+| Public | `GET /api/v1/public/channels`, `POST /api/v1/public/channels/{channelId}/posts` (API token) |
 
 ## Environment
 
@@ -93,4 +93,5 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
+- `POST /api/v1/public/channels/{channelId}/posts` creates a post in that channel. JSON body: `{ "title", "caption", "mediaId", "status" }`. Multipart form: `title`, `caption`, `status`, and `media` (image file). Auth is the same API token.
 - Call `http://localhost:8080` from Postman (not the Vite origin). CORS allows any Origin for Bearer clients; missing tokens return 401.

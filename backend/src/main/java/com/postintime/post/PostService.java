@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -75,6 +76,25 @@ public class PostService {
             post.setMedia(mediaService.getOwnedMedia(request.mediaId()));
         }
         return toResponse(postRepository.save(post));
+    }
+
+    @Transactional
+    public PostResponse createPost(UUID channelId, String title, String caption, UUID mediaId,
+                                   String status, MultipartFile mediaFile) {
+        if (title == null || title.isBlank()) {
+            throw new BusinessException("VALIDATION_ERROR", "Title is required.");
+        }
+        if (title.length() > 300) {
+            throw new BusinessException("VALIDATION_ERROR", "Title must be at most 300 characters.");
+        }
+        if (caption != null && caption.length() > 10000) {
+            throw new BusinessException("VALIDATION_ERROR", "Caption must be at most 10000 characters.");
+        }
+        UUID resolvedMediaId = mediaId;
+        if (mediaFile != null && !mediaFile.isEmpty()) {
+            resolvedMediaId = mediaService.upload(mediaFile).id();
+        }
+        return createPost(channelId, new CreatePostRequest(title, caption, resolvedMediaId, status));
     }
 
     @Transactional

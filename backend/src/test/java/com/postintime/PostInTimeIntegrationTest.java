@@ -250,6 +250,56 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    @Test
+    void publicCreatePostRequiresApiTokenAndAcceptsJsonOrMedia() throws Exception {
+        String apiToken = createApiToken(user1Token, "Public create");
+        String user2ApiToken = createApiToken(user2Token, "Other user");
+
+        mockMvc.perform(post("/api/v1/public/channels/" + techChannelId + "/posts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"No auth\",\"caption\":\"Nope\"}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/v1/public/channels/" + techChannelId + "/posts")
+                        .header("Authorization", "Bearer " + user2ApiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Wrong owner\",\"caption\":\"Nope\"}"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/v1/public/channels/" + techChannelId + "/posts")
+                        .header("X-Api-Key", apiToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Public JSON post\",\"caption\":\"From API\",\"status\":\"ready\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Public JSON post"))
+                .andExpect(jsonPath("$.caption").value("From API"))
+                .andExpect(jsonPath("$.channelId").value(techChannelId.toString()))
+                .andExpect(jsonPath("$.status").value("ready"))
+                .andExpect(jsonPath("$.media").value(org.hamcrest.Matchers.nullValue()));
+
+        byte[] png = java.util.Base64.getDecoder().decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+        MockMultipartFile media = new MockMultipartFile(
+                "media", "pixel.png", "image/png", png);
+
+        mockMvc.perform(multipart("/api/v1/public/channels/" + techChannelId + "/posts")
+                        .file(media)
+                        .param("title", "Public media post")
+                        .param("caption", "With image")
+                        .header("Authorization", "Bearer " + apiToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Public media post"))
+                .andExpect(jsonPath("$.caption").value("With image"))
+                .andExpect(jsonPath("$.media.originalFilename").value("pixel.png"))
+                .andExpect(jsonPath("$.media.contentType").value("image/png"));
+
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .param("search", "Public"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(2));
+    }
+
     private String targetsBody(UUID... accountIds) throws Exception {
         var node = objectMapper.createObjectNode();
         var array = node.putArray("socialAccountIds");
