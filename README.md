@@ -37,6 +37,15 @@ mvn spring-boot:run
 
 API runs at `http://localhost:8080`.
 
+To build and run the backend as a container instead:
+
+```bash
+docker build -t postintime-backend ./backend
+docker run --rm -p 8080:8080 --env-file .env postintime-backend
+```
+
+The image is a multistage Alpine build (Maven JDK → layered JRE). It listens on `PORT` (default 8080). Point `DATABASE_URL` at a reachable Postgres host (`host.docker.internal` from Docker Desktop).
+
 ### 4. Start frontend
 
 ```bash

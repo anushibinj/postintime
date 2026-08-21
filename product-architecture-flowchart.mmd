@@ -45,6 +45,11 @@ flowchart TB
     Media --> Storage
     Media --> PG
 
+    subgraph Packaging["Packaging"]
+        Image[Backend Docker image]
+    end
+    API --> Image
+
     subgraph Future["Future Publishing"]
         Manual[ManualSocialMediaPublisher]
         LinkedIn[LinkedInPublisher]
