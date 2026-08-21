@@ -9,12 +9,10 @@ FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 WORKDIR /build
 
 COPY pom.xml .
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -q dependency:go-offline -DskipTests
+RUN mvn -B -q dependency:go-offline -DskipTests
 
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -q -DskipTests package \
+RUN mvn -B -q -DskipTests package \
     && java -Djarmode=layertools -jar target/*.jar extract --destination /build/extracted
 
 # --- Runtime: Alpine JRE only, Spring Boot layers, non-root ---
