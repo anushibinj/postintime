@@ -32,5 +32,7 @@
 - [x] Swagger doc for all the public APIs - Creation of posts and Listing of channels for a user.
 - [x] Create a Postgres DB in Neon DB service (cloud)
 - [ ] Deploy the Spring Boot Backend into Google Cloud Run
+  - [ ] Set JWT_SECRET
+  - [ ] Set S3 details
 - [ ] Integrate this app with n8n to ingest posts into PostInTime
 - [ ] Create a SeaweedFS server on my home server
