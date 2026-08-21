@@ -33,4 +33,4 @@
 - [ ] Create a Postgres DB in Neon DB service (cloud)
 - [ ] Deploy the Spring Boot Backend into Google Cloud Run
 - [ ] Integrate this app with n8n to ingest posts into PostInTime
-- [ ] Create a SeaweedFS server on my home server
+- [ ] Create a SeaweedFS server on my home server.
