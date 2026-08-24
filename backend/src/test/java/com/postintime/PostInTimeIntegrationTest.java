@@ -367,7 +367,25 @@ class PostInTimeIntegrationTest {
             UUID accountId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
                     .get("id").asText());
 
-            UUID postId = createPost(user1Token, techChannelId, "Webhook Post");
+            byte[] png = java.util.Base64.getDecoder().decode(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+            MvcResult mediaResult = mockMvc.perform(multipart("/api/v1/media")
+                            .file(new MockMultipartFile("file", "banner.png", "image/png", png))
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+            String mediaId = objectMapper.readTree(mediaResult.getResponse().getContentAsString()).get("id").asText();
+
+            MvcResult postResult = mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"title\":\"Webhook Post\",\"caption\":\"Some description\",\"mediaId\":\""
+                                    + mediaId + "\",\"status\":\"ready\"}"))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+            UUID postId = UUID.fromString(objectMapper.readTree(postResult.getResponse().getContentAsString())
+                    .get("id").asText());
+
             mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + postId + "/targets/toggle")
                             .header("Authorization", "Bearer " + user1Token)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -375,9 +393,17 @@ class PostInTimeIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("published"));
 
-            assertThat(received.get()).contains("POST");
-            assertThat(received.get()).contains("multipart");
-            assertThat(received.get()).contains("Webhook Post");
+            String receivedBody = received.get();
+            assertThat(receivedBody).contains("POST");
+            assertThat(receivedBody).contains("multipart/form-data");
+            assertThat(receivedBody).contains("boundary=");
+            assertThat(receivedBody).contains("name=\"title\"");
+            assertThat(receivedBody).contains("Webhook Post");
+            assertThat(receivedBody).contains("name=\"caption\"");
+            assertThat(receivedBody).contains("Some description");
+            assertThat(receivedBody).contains("name=\"media\"");
+            assertThat(receivedBody).contains("banner.png");
+            assertThat(receivedBody).contains("image/png");
         } finally {
             server.stop(0);
         }

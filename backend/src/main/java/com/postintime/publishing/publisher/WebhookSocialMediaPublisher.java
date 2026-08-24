@@ -11,10 +11,12 @@ import com.postintime.social.SocialAccount;
 import com.postintime.social.WebhookAuthType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -52,26 +54,27 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         }
 
         Post post = context.post();
-        MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("title", post.getTitle() == null ? "" : post.getTitle());
-        body.part("caption", post.getCaption() == null ? "" : post.getCaption());
+        MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
         Media media = post.getMedia();
         if (media != null) {
             try {
                 byte[] bytes = storageService.download(media.getStorageKey());
+                String filename = media.getOriginalFilename() == null ? "media" : media.getOriginalFilename();
                 ByteArrayResource file = new ByteArrayResource(bytes) {
                     @Override
                     public String getFilename() {
-                        return media.getOriginalFilename();
+                        return filename;
                     }
                 };
-                MediaType contentType = MediaType.parseMediaType(
-                        media.getContentType() == null ? "application/octet-stream" : media.getContentType());
-                body.part("media", file, contentType);
+                HttpHeaders fileHeaders = new HttpHeaders();
+                fileHeaders.setContentType(parseMediaType(media.getContentType()));
+                parts.add("media", new HttpEntity<>(file, fileHeaders));
             } catch (Exception ex) {
                 return PublishResult.failure("MEDIA_READ_FAILED", "Could not read post media for the webhook.");
             }
         }
+        parts.add("title", post.getTitle() == null ? "" : post.getTitle());
+        parts.add("caption", post.getCaption() == null ? "" : post.getCaption());
 
         var request = webhookRestClient.post().uri(url);
         if (account.getWebhookAuthType() == WebhookAuthType.BASIC) {
@@ -83,10 +86,8 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         }
 
         try {
-            request.contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(body.build())
-                    .retrieve()
-                    .toBodilessEntity();
+            // Do not set Content-Type: multipart/form-data without a boundary — n8n then sees an empty body.
+            request.body(parts).retrieve().toBodilessEntity();
             return PublishResult.ok();
         } catch (RestClientResponseException ex) {
             String responseBody = ex.getResponseBodyAsString();
@@ -98,6 +99,17 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         } catch (Exception ex) {
             String message = ex.getMessage() == null ? "Webhook request failed." : ex.getMessage();
             return PublishResult.failure("WEBHOOK_UNREACHABLE", truncate(message));
+        }
+    }
+
+    private MediaType parseMediaType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(contentType);
+        } catch (Exception ex) {
+            return MediaType.APPLICATION_OCTET_STREAM;
         }
     }
 
