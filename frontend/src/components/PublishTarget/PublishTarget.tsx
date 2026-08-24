@@ -35,8 +35,23 @@ export function PublishTargetPanel({ target, post, channelId, postId }: PublishT
   };
 
   const handlePublish = async () => {
-    await publish.mutateAsync(target.id);
-    setModalOpen(true);
+    try {
+      const result = await publish.mutateAsync(target.id);
+      if (result.publishingMode === 'webhook') {
+        message.success('Webhook published');
+        return;
+      }
+      setModalOpen(true);
+    } catch (error) {
+      Modal.error({
+        title: 'Publish failed',
+        content: (
+          <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>
+            {error instanceof Error ? error.message : 'Publish failed'}
+          </Typography.Paragraph>
+        ),
+      });
+    }
   };
 
   const handleMarkPublished = async () => {

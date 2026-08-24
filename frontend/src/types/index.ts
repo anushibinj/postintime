@@ -1,7 +1,8 @@
 export type PostStatus = 'draft' | 'ready';
 export type TargetStatus = 'pending' | 'publishing' | 'published' | 'failed' | 'skipped';
 export type Platform = 'linkedin' | 'instagram' | 'whatsapp' | 'youtube' | 'x' | 'facebook' | 'threads';
-export type PostingMode = 'manual' | 'api';
+export type PostingMode = 'manual' | 'webhook';
+export type WebhookAuthType = 'none' | 'basic';
 
 export interface ApiToken {
   id: string;
@@ -80,6 +81,10 @@ export interface SocialAccount {
   profileUrl?: string;
   postingMode: PostingMode;
   enabled: boolean;
+  webhookUrl?: string | null;
+  webhookAuthType?: WebhookAuthType;
+  webhookUsername?: string | null;
+  webhookHasPassword?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -7,6 +7,10 @@ public record UpdateSocialAccountRequest(
         @Size(max = 150) String name,
         String profileUrl,
         String postingMode,
-        Boolean enabled
+        Boolean enabled,
+        String webhookUrl,
+        String webhookAuthType,
+        String webhookUsername,
+        String webhookPassword
 ) {
 }

@@ -46,6 +46,19 @@ public class SocialAccount {
     @Column(name = "posting_mode", nullable = false, length = 30)
     private PostingMode postingMode = PostingMode.MANUAL;
 
+    @Column(name = "webhook_url")
+    private String webhookUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "webhook_auth_type", nullable = false, length = 20)
+    private WebhookAuthType webhookAuthType = WebhookAuthType.NONE;
+
+    @Column(name = "webhook_username")
+    private String webhookUsername;
+
+    @Column(name = "webhook_password")
+    private String webhookPassword;
+
     @Column(nullable = false)
     private boolean enabled = true;
 

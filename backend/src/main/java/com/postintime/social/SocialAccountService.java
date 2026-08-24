@@ -39,7 +39,15 @@ public class SocialAccountService {
         account.setPlatform(parsePlatform(request.platform()));
         account.setName(request.name());
         account.setProfileUrl(request.profileUrl());
-        account.setPostingMode(parsePostingMode(request.postingMode()));
+        applyPostingSettings(
+                account,
+                request.postingMode(),
+                request.webhookUrl(),
+                request.webhookAuthType(),
+                request.webhookUsername(),
+                request.webhookPassword(),
+                true
+        );
         return toResponse(socialAccountRepository.save(account));
     }
 
@@ -56,11 +64,25 @@ public class SocialAccountService {
         if (request.profileUrl() != null) {
             account.setProfileUrl(request.profileUrl());
         }
-        if (request.postingMode() != null) {
-            account.setPostingMode(parsePostingMode(request.postingMode()));
-        }
         if (request.enabled() != null) {
             account.setEnabled(request.enabled());
+        }
+        if (request.postingMode() != null
+                || request.webhookUrl() != null
+                || request.webhookAuthType() != null
+                || request.webhookUsername() != null
+                || request.webhookPassword() != null) {
+            applyPostingSettings(
+                    account,
+                    request.postingMode() != null ? request.postingMode() : account.getPostingMode().name(),
+                    request.webhookUrl() != null ? request.webhookUrl() : account.getWebhookUrl(),
+                    request.webhookAuthType() != null
+                            ? request.webhookAuthType()
+                            : account.getWebhookAuthType().name(),
+                    request.webhookUsername() != null ? request.webhookUsername() : account.getWebhookUsername(),
+                    request.webhookPassword(),
+                    false
+            );
         }
         return toResponse(socialAccountRepository.save(account));
     }
@@ -96,6 +118,52 @@ public class SocialAccountService {
         }
     }
 
+    private void applyPostingSettings(SocialAccount account,
+                                      String postingModeValue,
+                                      String webhookUrl,
+                                      String webhookAuthTypeValue,
+                                      String webhookUsername,
+                                      String webhookPassword,
+                                      boolean creating) {
+        PostingMode postingMode = parsePostingMode(postingModeValue);
+        account.setPostingMode(postingMode);
+        if (postingMode == PostingMode.MANUAL) {
+            account.setWebhookUrl(null);
+            account.setWebhookAuthType(WebhookAuthType.NONE);
+            account.setWebhookUsername(null);
+            account.setWebhookPassword(null);
+            return;
+        }
+
+        String url = webhookUrl == null ? null : webhookUrl.trim();
+        if (url == null || url.isBlank()) {
+            throw new BusinessException("VALIDATION_ERROR", "Webhook URL is required for webhook posting.");
+        }
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            throw new BusinessException("VALIDATION_ERROR", "Webhook URL must start with http:// or https://.");
+        }
+        account.setWebhookUrl(url);
+
+        WebhookAuthType authType = parseWebhookAuthType(webhookAuthTypeValue);
+        account.setWebhookAuthType(authType);
+        if (authType == WebhookAuthType.NONE) {
+            account.setWebhookUsername(null);
+            account.setWebhookPassword(null);
+            return;
+        }
+
+        String username = webhookUsername == null ? null : webhookUsername.trim();
+        if (username == null || username.isBlank()) {
+            throw new BusinessException("VALIDATION_ERROR", "Basic auth username is required.");
+        }
+        account.setWebhookUsername(username);
+        if (webhookPassword != null && !webhookPassword.isBlank()) {
+            account.setWebhookPassword(webhookPassword);
+        } else if (creating || account.getWebhookPassword() == null || account.getWebhookPassword().isBlank()) {
+            throw new BusinessException("VALIDATION_ERROR", "Basic auth password is required.");
+        }
+    }
+
     private SocialAccountResponse toResponse(SocialAccount account) {
         return new SocialAccountResponse(
                 account.getId(),
@@ -104,6 +172,10 @@ public class SocialAccountService {
                 account.getProfileUrl(),
                 account.getPostingMode().name().toLowerCase(),
                 account.isEnabled(),
+                account.getWebhookUrl(),
+                account.getWebhookAuthType().name().toLowerCase(),
+                account.getWebhookUsername(),
+                account.getWebhookPassword() != null && !account.getWebhookPassword().isBlank(),
                 account.getCreatedAt(),
                 account.getUpdatedAt()
         );
@@ -121,6 +193,25 @@ public class SocialAccountService {
         if (mode == null || mode.isBlank()) {
             return PostingMode.MANUAL;
         }
-        return PostingMode.valueOf(mode.toUpperCase());
+        try {
+            String value = mode.toUpperCase();
+            if ("API".equals(value)) {
+                return PostingMode.WEBHOOK;
+            }
+            return PostingMode.valueOf(value);
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException("VALIDATION_ERROR", "Invalid posting mode. Use manual or webhook.");
+        }
+    }
+
+    private WebhookAuthType parseWebhookAuthType(String type) {
+        if (type == null || type.isBlank()) {
+            return WebhookAuthType.NONE;
+        }
+        try {
+            return WebhookAuthType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException("VALIDATION_ERROR", "Invalid webhook auth type. Use none or basic.");
+        }
     }
 }

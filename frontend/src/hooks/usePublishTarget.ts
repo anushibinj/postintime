@@ -24,6 +24,7 @@ export function usePublishingMutations(channelId: string, postId: string) {
     }),
     publish: useMutation({
       mutationFn: (targetId: string) => publishTarget(channelId, postId, targetId),
+      onSuccess: invalidate,
     }),
     markPublished: useMutation({
       mutationFn: (targetId: string) => markPublished(channelId, postId, targetId),

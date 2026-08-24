@@ -331,6 +331,94 @@ class PostInTimeIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void webhookAccountRequiresUrlAndPublishesViaMultipartPost() throws Exception {
+        mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/social-accounts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"platform\":\"x\",\"name\":\"Webhook\",\"postingMode\":\"webhook\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        java.util.concurrent.atomic.AtomicReference<String> received = new java.util.concurrent.atomic.AtomicReference<>();
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/hook", exchange -> {
+            byte[] body = exchange.getRequestBody().readAllBytes();
+            received.set(exchange.getRequestMethod() + " "
+                    + exchange.getRequestHeaders().getFirst("Content-Type") + " "
+                    + new String(body));
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        try {
+            String webhookUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/hook";
+            MvcResult created = mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/social-accounts")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"platform\":\"x\",\"name\":\"Webhook\",\"postingMode\":\"webhook\","
+                                    + "\"webhookUrl\":\"" + webhookUrl + "\",\"webhookAuthType\":\"none\"}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.postingMode").value("webhook"))
+                    .andExpect(jsonPath("$.webhookUrl").value(webhookUrl))
+                    .andExpect(jsonPath("$.webhookHasPassword").value(false))
+                    .andReturn();
+            UUID accountId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                    .get("id").asText());
+
+            UUID postId = createPost(user1Token, techChannelId, "Webhook Post");
+            mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + postId + "/targets/toggle")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"socialAccountId\":\"" + accountId + "\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("published"));
+
+            assertThat(received.get()).contains("POST");
+            assertThat(received.get()).contains("multipart");
+            assertThat(received.get()).contains("Webhook Post");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void webhookPublishFailureReturnsDetailedError() throws Exception {
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/hook", exchange -> {
+            byte[] response = "n8n exploded".getBytes();
+            exchange.sendResponseHeaders(500, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+        try {
+            String webhookUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/hook";
+            MvcResult created = mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/social-accounts")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"platform\":\"linkedin\",\"name\":\"Failing webhook\",\"postingMode\":\"webhook\","
+                                    + "\"webhookUrl\":\"" + webhookUrl + "\"}"))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+            UUID accountId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                    .get("id").asText());
+            UUID postId = createPost(user1Token, techChannelId, "Will Fail");
+
+            mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + postId + "/targets/toggle")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"socialAccountId\":\"" + accountId + "\"}"))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("PUBLISH_FAILED"))
+                    .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("n8n exploded")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private String targetsBody(UUID... accountIds) throws Exception {
         var node = objectMapper.createObjectNode();
         var array = node.putArray("socialAccountIds");

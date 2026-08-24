@@ -52,6 +52,15 @@ public class LocalStorageConfig {
             }
 
             @Override
+            public byte[] download(String key) {
+                try {
+                    return Files.readAllBytes(root.resolve(key));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
             public String getPublicUrl(String key) {
                 return baseUrl + "/api/v1/media/files/" + key;
             }

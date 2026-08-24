@@ -9,5 +9,7 @@ public interface StorageService {
 
     void delete(String key);
 
+    byte[] download(String key);
+
     String getPublicUrl(String key);
 }

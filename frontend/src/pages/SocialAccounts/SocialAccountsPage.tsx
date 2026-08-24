@@ -1,9 +1,9 @@
-import { Button, Card, Col, Form, Input, Modal, Row, Select, Space, Tooltip, Typography, message } from 'antd';
+import { Button, Card, Col, Form, Input, Modal, Radio, Row, Select, Space, Tooltip, Typography, message } from 'antd';
 import { ArrowLeft, Pencil, Plus, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useSocialAccounts, useSocialAccountMutations } from '../../hooks/useSocialAccounts';
-import type { Platform, SocialAccount } from '../../types';
+import type { Platform, PostingMode, SocialAccount, WebhookAuthType } from '../../types';
 
 const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'linkedin', label: 'LinkedIn' },
@@ -15,6 +15,17 @@ const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'threads', label: 'Threads' },
 ];
 
+type AccountFormValues = {
+  platform: Platform;
+  name: string;
+  profileUrl?: string;
+  postingMode: PostingMode;
+  webhookUrl?: string;
+  webhookAuthType: WebhookAuthType;
+  webhookUsername?: string;
+  webhookPassword?: string;
+};
+
 export function SocialAccountsPage() {
   const { channelId } = useParams();
   const navigate = useNavigate();
@@ -22,32 +33,57 @@ export function SocialAccountsPage() {
   const mutations = useSocialAccountMutations(channelId!);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SocialAccount | null>(null);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<AccountFormValues>();
+  const postingMode = Form.useWatch('postingMode', form);
+  const webhookAuthType = Form.useWatch('webhookAuthType', form);
 
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ postingMode: 'manual' });
+    form.setFieldsValue({ postingMode: 'manual', webhookAuthType: 'none' });
     setModalOpen(true);
   };
 
   const openEdit = (account: SocialAccount) => {
     setEditing(account);
-    form.setFieldsValue(account);
+    form.setFieldsValue({
+      platform: account.platform,
+      name: account.name,
+      profileUrl: account.profileUrl,
+      postingMode: account.postingMode === 'webhook' ? 'webhook' : 'manual',
+      webhookUrl: account.webhookUrl || undefined,
+      webhookAuthType: account.webhookAuthType || 'none',
+      webhookUsername: account.webhookUsername || undefined,
+      webhookPassword: undefined,
+    });
     setModalOpen(true);
   };
 
-  const handleSave = async (values: { platform: Platform; name: string; profileUrl?: string }) => {
+  const handleSave = async (values: AccountFormValues) => {
     try {
+      const payload = {
+        platform: values.platform,
+        name: values.name,
+        profileUrl: values.profileUrl,
+        postingMode: values.postingMode,
+        webhookUrl: values.postingMode === 'webhook' ? values.webhookUrl : undefined,
+        webhookAuthType: values.postingMode === 'webhook' ? values.webhookAuthType : 'none',
+        webhookUsername: values.postingMode === 'webhook' && values.webhookAuthType === 'basic'
+          ? values.webhookUsername
+          : undefined,
+        webhookPassword: values.postingMode === 'webhook' && values.webhookAuthType === 'basic'
+          ? values.webhookPassword
+          : undefined,
+      };
       if (editing) {
-        await mutations.update.mutateAsync({ accountId: editing.id, data: values });
+        await mutations.update.mutateAsync({ accountId: editing.id, data: payload });
       } else {
-        await mutations.create.mutateAsync(values);
+        await mutations.create.mutateAsync(payload);
       }
       setModalOpen(false);
       message.success('Account saved');
-    } catch {
-      message.error('Failed to save account');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Failed to save account');
     }
   };
 
@@ -113,8 +149,16 @@ export function SocialAccountsPage() {
                           </Typography.Link>
                         </div>
                       )}
+                      {account.postingMode === 'webhook' && account.webhookUrl && (
+                        <Typography.Paragraph type="secondary" ellipsis style={{ marginTop: 8, marginBottom: 0 }}>
+                          {account.webhookUrl}
+                        </Typography.Paragraph>
+                      )}
                       <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-                        Manual · {account.enabled ? 'Enabled' : 'Disabled'}
+                        {account.postingMode === 'webhook' ? 'Webhook' : 'Manual'}
+                        {account.postingMode === 'webhook' && account.webhookAuthType === 'basic' ? ' · Basic auth' : ''}
+                        {' · '}
+                        {account.enabled ? 'Enabled' : 'Disabled'}
                       </Typography.Paragraph>
                     </>
                   }
@@ -141,6 +185,50 @@ export function SocialAccountsPage() {
           <Form.Item name="profileUrl" label="Profile URL">
             <Input placeholder="https://instagram.com/example" />
           </Form.Item>
+          <Form.Item name="postingMode" label="Action type" rules={[{ required: true }]}>
+            <Radio.Group>
+              <Radio.Button value="manual">Manual</Radio.Button>
+              <Radio.Button value="webhook">Webhook</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+          {postingMode === 'webhook' && (
+            <>
+              <Form.Item
+                name="webhookUrl"
+                label="Webhook URL"
+                rules={[{ required: true, message: 'Webhook URL is required' }]}
+              >
+                <Input placeholder="https://n8n.example.com/webhook/post" />
+              </Form.Item>
+              <Form.Item name="webhookAuthType" label="Credentials" rules={[{ required: true }]}>
+                <Radio.Group>
+                  <Radio.Button value="none">None</Radio.Button>
+                  <Radio.Button value="basic">Basic</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+              {webhookAuthType === 'basic' && (
+                <>
+                  <Form.Item
+                    name="webhookUsername"
+                    label="Username"
+                    rules={[{ required: true, message: 'Username is required' }]}
+                  >
+                    <Input autoComplete="off" />
+                  </Form.Item>
+                  <Form.Item
+                    name="webhookPassword"
+                    label="Password"
+                    rules={editing?.webhookHasPassword ? [] : [{ required: true, message: 'Password is required' }]}
+                  >
+                    <Input.Password
+                      placeholder={editing?.webhookHasPassword ? 'Leave blank to keep the current password' : undefined}
+                      autoComplete="new-password"
+                    />
+                  </Form.Item>
+                </>
+              )}
+            </>
+          )}
         </Form>
       </Modal>
     </div>

@@ -10,6 +10,10 @@ public record SocialAccountResponse(
         String profileUrl,
         String postingMode,
         boolean enabled,
+        String webhookUrl,
+        String webhookAuthType,
+        String webhookUsername,
+        boolean webhookHasPassword,
         Instant createdAt,
         Instant updatedAt
 ) {

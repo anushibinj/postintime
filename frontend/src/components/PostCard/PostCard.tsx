@@ -1,4 +1,4 @@
-import { Empty, Tooltip, Typography, message } from 'antd';
+import { Empty, Modal, Tooltip, Typography } from 'antd';
 import { Check, ImageOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -32,7 +32,16 @@ export function PostCard({ post, channelId, accounts }: { post: Post; channelId:
       queryClient.invalidateQueries({ queryKey: ['post', channelId, post.id] });
       queryClient.invalidateQueries({ queryKey: ['targets', channelId, post.id] });
     },
-    onError: () => message.error('Could not update publish status'),
+    onError: (error: Error) => {
+      Modal.error({
+        title: 'Publish failed',
+        content: (
+          <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>
+            {error.message || 'Could not update publish status'}
+          </Typography.Paragraph>
+        ),
+      });
+    },
   });
 
   return (
@@ -94,11 +103,17 @@ function AccountToggle({
   onToggle: () => void;
 }) {
   const color = PLATFORM_COLORS[account.platform];
+  const webhook = account.postingMode === 'webhook';
+  const actionLabel = posted
+    ? `Unmark ${account.name}`
+    : webhook
+      ? `Send webhook for ${account.name}`
+      : `Mark ${account.name} as posted`;
   return (
-    <Tooltip title={`${account.name} · ${posted ? 'Posted' : 'Not posted'}`}>
+    <Tooltip title={`${account.name} · ${webhook ? 'Webhook' : 'Manual'} · ${posted ? 'Posted' : 'Not posted'}`}>
       <button
         type="button"
-        aria-label={`${posted ? 'Unmark' : 'Mark'} ${account.name} as posted`}
+        aria-label={actionLabel}
         aria-pressed={posted}
         disabled={disabled}
         onClick={(event) => {

@@ -50,11 +50,13 @@ flowchart TB
     end
     API --> Image
 
-    subgraph Future["Future Publishing"]
+    subgraph Future["Publishing adapters"]
         Manual[ManualSocialMediaPublisher]
+        Webhook[WebhookSocialMediaPublisher]
         LinkedIn[LinkedInPublisher]
         Instagram[InstagramPublisher]
         Publishing --> Manual
+        Publishing --> Webhook
         Publishing -.-> LinkedIn
         Publishing -.-> Instagram
     end

@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import type { Platform, PostingMode, SocialAccount } from '../types';
+import type { Platform, PostingMode, SocialAccount, WebhookAuthType } from '../types';
 
 export async function fetchSocialAccounts(channelId: string): Promise<SocialAccount[]> {
   return apiFetch<SocialAccount[]>(`/api/v1/channels/${channelId}/social-accounts`);
@@ -10,6 +10,10 @@ export async function createSocialAccount(channelId: string, data: {
   name: string;
   profileUrl?: string;
   postingMode?: PostingMode;
+  webhookUrl?: string;
+  webhookAuthType?: WebhookAuthType;
+  webhookUsername?: string;
+  webhookPassword?: string;
 }): Promise<SocialAccount> {
   return apiFetch<SocialAccount>(`/api/v1/channels/${channelId}/social-accounts`, {
     method: 'POST',
@@ -23,6 +27,10 @@ export async function updateSocialAccount(channelId: string, accountId: string, 
   profileUrl: string;
   postingMode: PostingMode;
   enabled: boolean;
+  webhookUrl: string;
+  webhookAuthType: WebhookAuthType;
+  webhookUsername: string;
+  webhookPassword: string;
 }>): Promise<SocialAccount> {
   return apiFetch<SocialAccount>(`/api/v1/channels/${channelId}/social-accounts/${accountId}`, {
     method: 'PATCH',

@@ -87,7 +87,7 @@ All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:808
 | Channels | `GET/POST /api/v1/channels`, `GET/PATCH/DELETE /api/v1/channels/{id}` |
 | Posts | `GET/POST /api/v1/channels/{id}/posts`, `GET/PATCH/DELETE .../posts/{postId}` |
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}` |
-| Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` |
+| Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` (posting mode: `manual` or `webhook`, optional webhook URL and Basic auth) |
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
 | Public | `GET /api/v1/public/channels`, `POST /api/v1/public/channels/{channelId}/posts` (API token) |
 
@@ -107,3 +107,4 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - `POST /api/v1/public/channels/{channelId}/posts` creates a post in that channel. JSON body: `{ "title", "caption", "mediaId", "status" }`. Multipart form: `title`, `caption`, `status`, and `media` (image file). Auth is the same API token.
 - Swagger UI for those public APIs: `http://localhost:8080/swagger-ui.html` (OpenAPI at `/v3/api-docs`)
 - Call `http://localhost:8080` from Postman (not the Vite origin). CORS allows any Origin for Bearer clients; missing tokens return 401.
+- Each social account is **Manual** (toggle published locally) or **Webhook**. Webhook accounts POST multipart `title`, `description`, and optional `media` to the configured URL (optional HTTP Basic). A successful webhook marks that account published on the post; failures return `PUBLISH_FAILED` with the response body.

@@ -14,9 +14,11 @@ import com.postintime.publishing.api.TogglePublishedRequest;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.PublishContext;
+import com.postintime.publishing.domain.PublishResult;
 import com.postintime.publishing.domain.TargetStatus;
 import com.postintime.publishing.publisher.PublisherFactory;
 import com.postintime.publishing.publisher.SocialMediaPublisher;
+import com.postintime.social.PostingMode;
 import com.postintime.social.SocialAccount;
 import com.postintime.social.SocialAccountRepository;
 import com.postintime.social.SocialAccountService;
@@ -88,17 +90,29 @@ public class PublishingService {
     @Transactional
     public PublishActionResponse publish(UUID channelId, UUID postId, UUID targetId) {
         PostTarget target = getOwnedTarget(channelId, postId, targetId);
-        SocialMediaPublisher publisher = publisherFactory.getPublisher(target.getPublishingMode());
-        publisher.publish(new PublishContext(target.getPost(), target.getSocialAccount(), target));
+        SocialAccount account = target.getSocialAccount();
+        target.setPublishingMode(account.getPostingMode());
+        if (account.getPostingMode() == PostingMode.MANUAL) {
+            SocialMediaPublisher publisher = publisherFactory.getPublisher(PostingMode.MANUAL);
+            publisher.publish(new PublishContext(target.getPost(), account, target));
+            postTargetRepository.save(target);
+            return new PublishActionResponse(
+                    target.getId(),
+                    target.getStatus().name().toLowerCase(),
+                    target.getPublishingMode().name().toLowerCase(),
+                    new PublishInstructionsResponse(
+                            true,
+                            target.getPost().getMedia() != null,
+                            account.getProfileUrl()
+                    )
+            );
+        }
+        applyWebhookPublish(target, account);
         return new PublishActionResponse(
                 target.getId(),
                 target.getStatus().name().toLowerCase(),
                 target.getPublishingMode().name().toLowerCase(),
-                new PublishInstructionsResponse(
-                        true,
-                        target.getPost().getMedia() != null,
-                        target.getSocialAccount().getProfileUrl()
-                )
+                new PublishInstructionsResponse(false, false, account.getWebhookUrl())
         );
     }
 
@@ -144,8 +158,33 @@ public class PublishingService {
             target.setSocialAccount(account);
             target.setPublishingMode(account.getPostingMode());
             target = postTargetRepository.save(target);
+        } else {
+            target.setPublishingMode(account.getPostingMode());
+        }
+        if (account.getPostingMode() == PostingMode.WEBHOOK) {
+            applyWebhookPublish(target, account);
+            return toResponse(target);
         }
         return markPublished(channelId, postId, target.getId(), null);
+    }
+
+    private void applyWebhookPublish(PostTarget target, SocialAccount account) {
+        socialAccountService.ensureAccountEnabled(account);
+        SocialMediaPublisher publisher = publisherFactory.getPublisher(PostingMode.WEBHOOK);
+        PublishResult result = publisher.publish(new PublishContext(target.getPost(), account, target));
+        if (!result.success()) {
+            throw new BusinessException(
+                    "PUBLISH_FAILED",
+                    result.errorMessage() != null ? result.errorMessage() : "Webhook publish failed."
+            );
+        }
+        target.setStatus(TargetStatus.PUBLISHED);
+        target.setPublishedAt(Instant.now());
+        target.setErrorCode(null);
+        target.setErrorMessage(null);
+        target.setExternalPostId(result.externalPostId());
+        target.setExternalUrl(result.externalUrl());
+        postTargetRepository.save(target);
     }
 
     private PostTarget getOwnedTarget(UUID channelId, UUID postId, UUID targetId) {

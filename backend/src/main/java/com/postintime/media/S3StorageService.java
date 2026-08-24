@@ -8,7 +8,10 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.InputStream;
@@ -56,6 +59,13 @@ public class S3StorageService implements StorageService {
     @Override
     public void delete(String key) {
         s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+    }
+
+    @Override
+    public byte[] download(String key) {
+        ResponseBytes<GetObjectResponse> object = s3Client.getObjectAsBytes(
+                GetObjectRequest.builder().bucket(bucket).key(key).build());
+        return object.asByteArray();
     }
 
     @Override
