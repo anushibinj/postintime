@@ -54,7 +54,7 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         Post post = context.post();
         MultipartBodyBuilder body = new MultipartBodyBuilder();
         body.part("title", post.getTitle() == null ? "" : post.getTitle());
-        body.part("description", post.getCaption() == null ? "" : post.getCaption());
+        body.part("caption", post.getCaption() == null ? "" : post.getCaption());
         Media media = post.getMedia();
         if (media != null) {
             try {
