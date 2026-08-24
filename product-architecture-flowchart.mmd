@@ -46,9 +46,16 @@ flowchart TB
     Media --> PG
 
     subgraph Packaging["Packaging"]
-        Image[Backend Docker image]
+        Compose[Docker Compose]
+        BeImage[Backend Docker image]
+        FeImage[Frontend Docker image]
+        Compose --> BeImage
+        Compose --> FeImage
+        Compose --> PG
+        Compose --> Storage
     end
-    API --> Image
+    API --> BeImage
+    Client --> FeImage
 
     subgraph Future["Publishing adapters"]
         Manual[ManualSocialMediaPublisher]

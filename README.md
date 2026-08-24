@@ -13,40 +13,43 @@ Channel-centric content management and social publishing application.
 ### Prerequisites
 
 - Docker & Docker Compose
-- Java 21
-- Node.js 20+ and pnpm
+- Java 21 and Node.js 20+ / pnpm (only if you run the apps on the host)
 
-### 1. Start infrastructure
-
-```bash
-docker compose up -d
-```
-
-### 2. Configure environment
+### 1. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-### 3. Start backend
+### 2. Start the full stack
+
+```bash
+docker compose up -d --build
+```
+
+This starts PostgreSQL, MinIO, the Spring Boot API, and the React UI.
+
+| Service | URL |
+|---------|-----|
+| App | http://localhost:5173 |
+| API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| MinIO console | http://localhost:9001 |
+
+Compose points the backend at the `postgres` and `minio` services. The browser still calls the API at `VITE_API_BASE_URL` (`http://localhost:8080` by default), which is baked into the frontend image at build time.
+
+Stop with `docker compose down`.
+
+### Run apps on the host (optional)
+
+With only infrastructure in Docker (`docker compose up -d postgres minio`):
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-API runs at `http://localhost:8080`.
-
-To build and run the backend as a container instead:
-
-```bash
-docker build -t postintime-backend ./backend
-docker run --rm -p 8080:8080 --env-file .env postintime-backend
-```
-
-The image is a multistage Alpine build (Maven JDK → layered JRE). It listens on `PORT` (default 8080). Point `DATABASE_URL` at a reachable Postgres host (`host.docker.internal` from Docker Desktop).
-
-### 4. Start frontend
+API: `http://localhost:8080`. The backend image is a multistage Alpine build (Maven JDK → layered JRE). It listens on `PORT` (default 8080).
 
 ```bash
 cd frontend
@@ -54,7 +57,7 @@ pnpm install
 pnpm dev
 ```
 
-App runs at `http://localhost:5173`.
+App: `http://localhost:5173`.
 
 ## Development
 
@@ -97,8 +100,8 @@ Public API docs (list channels and create posts): [http://localhost:8080/swagger
 
 Copy `.env.example` to `.env` and adjust values. For local development:
 
-- PostgreSQL runs via Docker Compose on port 5432
-- MinIO runs on ports 9000 (API) and 9001 (console)
+- `docker compose up -d --build` runs PostgreSQL, MinIO, backend, and frontend
+- PostgreSQL is on port 5432; MinIO on 9000 (API) and 9001 (console)
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
 - Frontend connects directly to `http://localhost:8080` (no Vite proxy)
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`

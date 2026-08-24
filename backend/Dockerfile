@@ -9,16 +9,16 @@ FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 WORKDIR /build
 
 COPY pom.xml .
-RUN mvn -B -q dependency:go-offline -DskipTests
-
 COPY src ./src
-RUN mvn -B -q -DskipTests package \
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -DskipTests package \
     && java -Djarmode=layertools -jar target/*.jar extract --destination /build/extracted
 
 # --- Runtime: Alpine JRE only, Spring Boot layers, non-root ---
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN apk add --no-cache wget \
+    && addgroup -S spring && adduser -S spring -G spring
 WORKDIR /app
 
 COPY --from=build --chown=spring:spring /build/extracted/dependencies/ ./
