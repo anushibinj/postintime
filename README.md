@@ -29,14 +29,17 @@ docker compose up -d --build
 
 This starts PostgreSQL, MinIO, the Spring Boot API, and the React UI.
 
-| Service | URL |
+Host ports are set in `.env` (`BACKEND_HOST_PORT`, `FRONTEND_HOST_PORT`, `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`). Defaults:
+
+| Service | URL (default host port) |
 |---------|-----|
 | App | http://localhost:5173 |
 | API | http://localhost:8080 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
+| MinIO API | http://localhost:9000 |
 | MinIO console | http://localhost:9001 |
 
-Compose points the backend at the `postgres` and `minio` services. The browser still calls the API at `VITE_API_BASE_URL` (`http://localhost:8080` by default), which is baked into the frontend image at build time.
+Containers still listen on 8080 (API), 80 (nginx), and 9000/9001 (MinIO). Compose publishes those to the host ports above. The browser calls `http://localhost:$BACKEND_HOST_PORT`, which is baked into the frontend image at build time — rebuild the frontend after changing `BACKEND_HOST_PORT`.
 
 Stop with `docker compose down`.
 
@@ -101,9 +104,9 @@ Public API docs (list channels and create posts): [http://localhost:8080/swagger
 Copy `.env.example` to `.env` and adjust values. For local development:
 
 - `docker compose up -d --build` runs PostgreSQL, MinIO, backend, and frontend
-- PostgreSQL is on port 5432; MinIO on 9000 (API) and 9001 (console)
+- Host ports: `BACKEND_HOST_PORT` (default 8080), `FRONTEND_HOST_PORT` (5173), `MINIO_API_HOST_PORT` (9000), `MINIO_CONSOLE_HOST_PORT` (9001); PostgreSQL stays on 5432
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
-- Frontend connects directly to `http://localhost:8080` (no Vite proxy)
+- Frontend connects directly to `http://localhost:$BACKEND_HOST_PORT` (no Vite proxy)
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
