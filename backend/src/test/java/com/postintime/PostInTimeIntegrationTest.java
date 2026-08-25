@@ -346,6 +346,7 @@ class PostInTimeIntegrationTest {
         server.createContext("/hook", exchange -> {
             byte[] body = exchange.getRequestBody().readAllBytes();
             received.set(exchange.getRequestMethod() + " "
+                    + "content-length=" + exchange.getRequestHeaders().getFirst("Content-Length") + " "
                     + exchange.getRequestHeaders().getFirst("Content-Type") + " "
                     + new String(body));
             exchange.sendResponseHeaders(200, -1);
@@ -395,6 +396,7 @@ class PostInTimeIntegrationTest {
 
             String receivedBody = received.get();
             assertThat(receivedBody).contains("POST");
+            assertThat(receivedBody).containsPattern("content-length=[1-9][0-9]*");
             assertThat(receivedBody).contains("multipart/form-data");
             assertThat(receivedBody).contains("boundary=");
             assertThat(receivedBody).contains("name=\"title\"");
@@ -404,6 +406,7 @@ class PostInTimeIntegrationTest {
             assertThat(receivedBody).contains("name=\"media\"");
             assertThat(receivedBody).contains("banner.png");
             assertThat(receivedBody).contains("image/png");
+            assertThat(receivedBody).contains("text/plain");
         } finally {
             server.stop(0);
         }

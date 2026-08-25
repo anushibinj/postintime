@@ -107,7 +107,7 @@ public class PublishingService {
                     )
             );
         }
-        applyWebhookPublish(target, account);
+        applyWebhookPublish(target.getPost(), target, account);
         return new PublishActionResponse(
                 target.getId(),
                 target.getStatus().name().toLowerCase(),
@@ -162,16 +162,16 @@ public class PublishingService {
             target.setPublishingMode(account.getPostingMode());
         }
         if (account.getPostingMode() == PostingMode.WEBHOOK) {
-            applyWebhookPublish(target, account);
+            applyWebhookPublish(post, target, account);
             return toResponse(target);
         }
         return markPublished(channelId, postId, target.getId(), null);
     }
 
-    private void applyWebhookPublish(PostTarget target, SocialAccount account) {
+    private void applyWebhookPublish(Post post, PostTarget target, SocialAccount account) {
         socialAccountService.ensureAccountEnabled(account);
         SocialMediaPublisher publisher = publisherFactory.getPublisher(PostingMode.WEBHOOK);
-        PublishResult result = publisher.publish(new PublishContext(target.getPost(), account, target));
+        PublishResult result = publisher.publish(new PublishContext(post, account, target));
         if (!result.success()) {
             throw new BusinessException(
                     "PUBLISH_FAILED",

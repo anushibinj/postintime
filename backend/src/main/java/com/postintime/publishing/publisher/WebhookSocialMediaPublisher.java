@@ -14,8 +14,8 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -54,7 +54,11 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         }
 
         Post post = context.post();
-        MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        // Explicit text/plain parts so receivers (e.g. n8n) always see title/caption as form fields.
+        bodyBuilder.part("title", post.getTitle() == null ? "" : post.getTitle(), MediaType.TEXT_PLAIN);
+        bodyBuilder.part("caption", post.getCaption() == null ? "" : post.getCaption(), MediaType.TEXT_PLAIN);
+
         Media media = post.getMedia();
         if (media != null) {
             try {
@@ -66,16 +70,15 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
                         return filename;
                     }
                 };
-                HttpHeaders fileHeaders = new HttpHeaders();
-                fileHeaders.setContentType(parseMediaType(media.getContentType()));
-                parts.add("media", new HttpEntity<>(file, fileHeaders));
+                bodyBuilder.part("media", file)
+                        .filename(filename)
+                        .contentType(parseMediaType(media.getContentType()));
             } catch (Exception ex) {
                 return PublishResult.failure("MEDIA_READ_FAILED", "Could not read post media for the webhook.");
             }
         }
-        parts.add("title", post.getTitle() == null ? "" : post.getTitle());
-        parts.add("caption", post.getCaption() == null ? "" : post.getCaption());
 
+        MultiValueMap<String, HttpEntity<?>> parts = bodyBuilder.build();
         var request = webhookRestClient.post().uri(url);
         if (account.getWebhookAuthType() == WebhookAuthType.BASIC) {
             String raw = (account.getWebhookUsername() == null ? "" : account.getWebhookUsername())
