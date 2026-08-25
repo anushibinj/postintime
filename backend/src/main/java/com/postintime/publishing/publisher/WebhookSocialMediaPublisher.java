@@ -11,7 +11,6 @@ import com.postintime.social.SocialAccount;
 import com.postintime.social.WebhookAuthType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -63,7 +62,7 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
             }
             multipart.addText("title", post.getTitle() == null ? "" : post.getTitle());
             multipart.addText("caption", post.getCaption() == null ? "" : post.getCaption());
-            contentType = multipart.contentType();
+            contentType = multipart.contentTypeHeader();
             body = multipart.build();
         } catch (Exception ex) {
             return PublishResult.failure("MEDIA_READ_FAILED", "Could not build webhook multipart body.");
@@ -71,7 +70,8 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
 
         var request = webhookRestClient.post()
                 .uri(url)
-                .contentType(MediaType.parseMediaType(contentType));
+                // Set the raw header so Spring does not reformat/quote the boundary (Bruno-compatible).
+                .header(HttpHeaders.CONTENT_TYPE, contentType);
         if (account.getWebhookAuthType() == WebhookAuthType.BASIC) {
             String raw = (account.getWebhookUsername() == null ? "" : account.getWebhookUsername())
                     + ":"

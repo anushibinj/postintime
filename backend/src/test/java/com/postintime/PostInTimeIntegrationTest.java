@@ -341,10 +341,12 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
         java.util.concurrent.atomic.AtomicReference<String> received = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<String> receivedContentType = new java.util.concurrent.atomic.AtomicReference<>();
         com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
                 new java.net.InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/hook", exchange -> {
             byte[] body = exchange.getRequestBody().readAllBytes();
+            receivedContentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
             received.set(exchange.getRequestMethod() + " "
                     + "content-length=" + exchange.getRequestHeaders().getFirst("Content-Length") + " "
                     + exchange.getRequestHeaders().getFirst("Content-Type") + " "
@@ -395,6 +397,8 @@ class PostInTimeIntegrationTest {
                     .andExpect(jsonPath("$.status").value("published"));
 
             String receivedBody = received.get();
+            assertThat(receivedContentType.get())
+                    .matches("multipart/form-data; boundary=-{26}[0-9a-f]{32}");
             assertThat(receivedBody).contains("POST");
             assertThat(receivedBody).containsPattern("content-length=[1-9][0-9]*");
             assertThat(receivedBody).contains("multipart/form-data");

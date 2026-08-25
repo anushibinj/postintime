@@ -14,6 +14,8 @@ import java.util.UUID;
 final class PostmanMultipartBody {
 
     private static final byte[] CRLF = "\r\n".getBytes(StandardCharsets.UTF_8);
+    /** Same style as Bruno/Postman: many dashes + hex token. */
+    private static final String BOUNDARY_PREFIX = "--------------------------";
 
     private final String boundary;
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -23,11 +25,20 @@ final class PostmanMultipartBody {
     }
 
     static PostmanMultipartBody create() {
-        return new PostmanMultipartBody("----postintime" + UUID.randomUUID().toString().replace("-", ""));
+        String token = UUID.randomUUID().toString().replace("-", "");
+        return new PostmanMultipartBody(BOUNDARY_PREFIX + token);
     }
 
-    String contentType() {
+    /**
+     * Exact header value Bruno sends, e.g.
+     * {@code multipart/form-data; boundary=--------------------------cfabd0e9...}
+     */
+    String contentTypeHeader() {
         return "multipart/form-data; boundary=" + boundary;
+    }
+
+    String boundary() {
+        return boundary;
     }
 
     PostmanMultipartBody addText(String name, String value) throws IOException {

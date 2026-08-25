@@ -16,9 +16,11 @@ class PostmanMultipartBodyTest {
                 .addText("caption", "Some description");
 
         String body = new String(multipart.build(), StandardCharsets.UTF_8);
-        String contentType = multipart.contentType();
+        String contentType = multipart.contentTypeHeader();
 
-        assertThat(contentType).startsWith("multipart/form-data; boundary=");
+        assertThat(contentType).matches("multipart/form-data; boundary=-{26}[0-9a-f]{32}");
+        assertThat(multipart.boundary()).startsWith("--------------------------");
+        assertThat(body).startsWith("--" + multipart.boundary());
         assertThat(body).contains("Content-Disposition: form-data; name=\"media\"; filename=\"banner.png\"");
         assertThat(body).contains("Content-Type: image/png");
         assertThat(body).contains("Content-Disposition: form-data; name=\"title\"");
