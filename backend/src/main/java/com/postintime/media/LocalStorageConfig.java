@@ -19,6 +19,7 @@ public class LocalStorageConfig {
     @ConditionalOnProperty(name = "app.storage.type", havingValue = "local")
     public StorageService localStorageService(@Value("${app.storage.local-path:./storage}") String localPath,
                                               @Value("${app.base-url}") String baseUrl) {
+        final String publicBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         return new StorageService() {
             private final Path root = Path.of(localPath);
 
@@ -62,7 +63,7 @@ public class LocalStorageConfig {
 
             @Override
             public String getPublicUrl(String key) {
-                return baseUrl + "/api/v1/media/files/" + key;
+                return publicBaseUrl + "/api/v1/media/files/" + key;
             }
         };
     }

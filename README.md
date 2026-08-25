@@ -39,7 +39,7 @@ Host ports are set in `.env` (`BACKEND_HOST_PORT`, `FRONTEND_HOST_PORT`, `MINIO_
 | MinIO API | http://localhost:9000 |
 | MinIO console | http://localhost:9001 |
 
-Containers still listen on 8080 (API), 80 (nginx), and 9000/9001 (MinIO). Compose publishes those to the host ports above. The browser calls `http://localhost:$BACKEND_HOST_PORT`, which is baked into the frontend image at build time — rebuild the frontend after changing `BACKEND_HOST_PORT`.
+Containers still listen on 8080 (API), 80 (nginx), and 9000/9001 (MinIO). Compose publishes those to the host ports above. Set `APPLICATION_ROOT_URL` (and matching `VITE_API_BASE_URL`) to the public API origin the browser uses — media URLs from the API are built from that value. Rebuild the frontend after changing `VITE_API_BASE_URL` / `BACKEND_HOST_PORT`.
 
 Stop with `docker compose down`.
 
@@ -106,7 +106,7 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - `docker compose up -d --build` runs PostgreSQL, MinIO, backend, and frontend
 - Host ports: `BACKEND_HOST_PORT` (default 8080), `FRONTEND_HOST_PORT` (5173), `MINIO_API_HOST_PORT` (9000), `MINIO_CONSOLE_HOST_PORT` (9001); PostgreSQL stays on 5432
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
-- Frontend connects directly to `http://localhost:$BACKEND_HOST_PORT` (no Vite proxy)
+- Frontend connects directly to `VITE_API_BASE_URL` (no Vite proxy). Media file URLs in API responses use `APPLICATION_ROOT_URL` (`app.base-url`); keep those two in sync with the published backend host port.
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)

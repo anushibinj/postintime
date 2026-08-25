@@ -35,7 +35,7 @@ public class S3StorageService implements StorageService {
             @Value("${app.base-url}") String baseUrl) {
         this.endpoint = endpoint;
         this.bucket = bucket;
-        this.baseUrl = baseUrl;
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.s3Client = S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))

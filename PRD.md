@@ -2285,7 +2285,7 @@ DATABASE_PASSWORD=change-me
 STORAGE_ENDPOINT=...
 STORAGE_BUCKET=postintime
 
-APP_BASE_URL=http://localhost:8080
+APPLICATION_ROOT_URL=http://localhost:8080
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
