@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Platform, Post, SocialAccount } from '../../types';
 import { useSocialAccounts } from '../../hooks/useSocialAccounts';
 import { togglePublished } from '../../api/publishing';
+import { mediaUrlWithSize } from '../../api/media';
 
 const THUMB_SIZE = 64;
 const ICON_SIZE = 36;
@@ -179,7 +180,9 @@ function PostThumb({ url, title }: { url?: string; title: string }) {
     return (
       <img
         alt={title}
-        src={url}
+        src={mediaUrlWithSize(url, THUMB_SIZE)}
+        width={THUMB_SIZE}
+        height={THUMB_SIZE}
         style={{
           width: THUMB_SIZE,
           height: THUMB_SIZE,

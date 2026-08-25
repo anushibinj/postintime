@@ -421,6 +421,40 @@ class PostInTimeIntegrationTest {
     }
 
     @Test
+    void mediaFileSupportsSizeQueryForThumbnails() throws Exception {
+        byte[] png = java.util.Base64.getDecoder().decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC");
+        MvcResult mediaResult = mockMvc.perform(multipart("/api/v1/media")
+                        .file(new MockMultipartFile("file", "thumb-source.png", "image/png", png))
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String url = objectMapper.readTree(mediaResult.getResponse().getContentAsString()).get("url").asText();
+        String path = java.net.URI.create(url).getPath();
+
+        mockMvc.perform(get(path).param("size", "8"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        MvcResult thumb = mockMvc.perform(get(path).param("size", "32"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .contentTypeCompatibleWith(MediaType.IMAGE_JPEG))
+                .andReturn();
+
+        byte[] thumbBytes = thumb.getResponse().getContentAsByteArray();
+        assertThat(thumbBytes.length).isGreaterThan(0);
+        java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(thumbBytes));
+        assertThat(image.getWidth()).isEqualTo(32);
+        assertThat(image.getHeight()).isEqualTo(32);
+
+        mockMvc.perform(get(path))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .contentTypeCompatibleWith(MediaType.IMAGE_PNG));
+    }
+
+    @Test
     void webhookPublishFailureReturnsDetailedError() throws Exception {
         com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
                 new java.net.InetSocketAddress("127.0.0.1", 0), 0);

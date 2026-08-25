@@ -45,6 +45,20 @@ public class MediaFileService {
         return new InputStreamResource(object);
     }
 
+    public byte[] loadBytes(String key) throws IOException {
+        if ("local".equals(storageType)) {
+            Path file = localRoot.resolve(key);
+            if (!Files.exists(file)) {
+                throw new IOException("File not found");
+            }
+            return Files.readAllBytes(file);
+        }
+        GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key).build();
+        try (ResponseInputStream<GetObjectResponse> object = s3Client.getObject(request)) {
+            return object.readAllBytes();
+        }
+    }
+
     public String getContentType(String key) throws IOException {
         if ("local".equals(storageType)) {
             Path file = localRoot.resolve(key);

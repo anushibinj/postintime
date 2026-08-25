@@ -13,6 +13,7 @@ flowchart TB
         Channels[Channel Module]
         Posts[Post Module]
         Media[Media Module]
+        MediaThumbs[Thumbnails ?size=]
         Social[Social Account Module]
         Publishing[Publishing Module]
         Public[Public API]
@@ -29,6 +30,7 @@ flowchart TB
         Posts --> Publishing
         Social --> Publishing
         Media --> Posts
+        Media --> MediaThumbs
     end
 
     subgraph Data["Data Layer"]

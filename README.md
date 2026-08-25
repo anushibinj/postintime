@@ -92,7 +92,7 @@ All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:808
 | API tokens | `GET/POST /api/v1/api-tokens`, `PATCH/DELETE /api/v1/api-tokens/{id}`, `POST .../refresh` |
 | Channels | `GET/POST /api/v1/channels`, `GET/PATCH/DELETE /api/v1/channels/{id}` |
 | Posts | `GET/POST /api/v1/channels/{id}/posts`, `GET/PATCH/DELETE .../posts/{postId}` |
-| Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}` |
+| Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}`, `GET /api/v1/media/files/**` (optional `?size=32`…`512` for square JPEG thumbnails) |
 | Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` (posting mode: `manual` or `webhook`, optional webhook URL and Basic auth) |
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
 | Public | `GET /api/v1/public/channels`, `POST /api/v1/public/channels/{channelId}/posts` (API token) |
@@ -106,7 +106,7 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - `docker compose up -d --build` runs PostgreSQL, MinIO, backend, and frontend
 - Host ports: `BACKEND_HOST_PORT` (default 8080), `FRONTEND_HOST_PORT` (5173), `MINIO_API_HOST_PORT` (9000), `MINIO_CONSOLE_HOST_PORT` (9001); PostgreSQL stays on 5432
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
-- Frontend connects directly to `VITE_API_BASE_URL` (no Vite proxy). Media file URLs in API responses use `APPLICATION_ROOT_URL` (`app.base-url`); keep those two in sync with the published backend host port.
+- Frontend connects directly to `VITE_API_BASE_URL` (no Vite proxy). Media file URLs in API responses use `APPLICATION_ROOT_URL` (`app.base-url`); keep those two in sync with the published backend host port. List thumbnails request `GET .../media/files/...?size=64` (square JPEG via Thumbnailator; allowed size 16–512).
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
