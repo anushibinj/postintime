@@ -10,13 +10,9 @@ import com.postintime.social.PostingMode;
 import com.postintime.social.SocialAccount;
 import com.postintime.social.WebhookAuthType;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -54,32 +50,28 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         }
 
         Post post = context.post();
-        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        // Explicit text/plain parts so receivers (e.g. n8n) always see title/caption as form fields.
-        bodyBuilder.part("title", post.getTitle() == null ? "" : post.getTitle(), MediaType.TEXT_PLAIN);
-        bodyBuilder.part("caption", post.getCaption() == null ? "" : post.getCaption(), MediaType.TEXT_PLAIN);
-
-        Media media = post.getMedia();
-        if (media != null) {
-            try {
+        byte[] body;
+        String contentType;
+        try {
+            PostmanMultipartBody multipart = PostmanMultipartBody.create();
+            // Match Postman/Bruno field order: media, then title, then caption.
+            Media media = post.getMedia();
+            if (media != null) {
                 byte[] bytes = storageService.download(media.getStorageKey());
                 String filename = media.getOriginalFilename() == null ? "media" : media.getOriginalFilename();
-                ByteArrayResource file = new ByteArrayResource(bytes) {
-                    @Override
-                    public String getFilename() {
-                        return filename;
-                    }
-                };
-                bodyBuilder.part("media", file)
-                        .filename(filename)
-                        .contentType(parseMediaType(media.getContentType()));
-            } catch (Exception ex) {
-                return PublishResult.failure("MEDIA_READ_FAILED", "Could not read post media for the webhook.");
+                multipart.addFile("media", filename, media.getContentType(), bytes);
             }
+            multipart.addText("title", post.getTitle() == null ? "" : post.getTitle());
+            multipart.addText("caption", post.getCaption() == null ? "" : post.getCaption());
+            contentType = multipart.contentType();
+            body = multipart.build();
+        } catch (Exception ex) {
+            return PublishResult.failure("MEDIA_READ_FAILED", "Could not build webhook multipart body.");
         }
 
-        MultiValueMap<String, HttpEntity<?>> parts = bodyBuilder.build();
-        var request = webhookRestClient.post().uri(url);
+        var request = webhookRestClient.post()
+                .uri(url)
+                .contentType(MediaType.parseMediaType(contentType));
         if (account.getWebhookAuthType() == WebhookAuthType.BASIC) {
             String raw = (account.getWebhookUsername() == null ? "" : account.getWebhookUsername())
                     + ":"
@@ -89,8 +81,7 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         }
 
         try {
-            // Do not set Content-Type: multipart/form-data without a boundary — n8n then sees an empty body.
-            request.body(parts).retrieve().toBodilessEntity();
+            request.body(body).retrieve().toBodilessEntity();
             return PublishResult.ok();
         } catch (RestClientResponseException ex) {
             String responseBody = ex.getResponseBodyAsString();
@@ -102,17 +93,6 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
         } catch (Exception ex) {
             String message = ex.getMessage() == null ? "Webhook request failed." : ex.getMessage();
             return PublishResult.failure("WEBHOOK_UNREACHABLE", truncate(message));
-        }
-    }
-
-    private MediaType parseMediaType(String contentType) {
-        if (contentType == null || contentType.isBlank()) {
-            return MediaType.APPLICATION_OCTET_STREAM;
-        }
-        try {
-            return MediaType.parseMediaType(contentType);
-        } catch (Exception ex) {
-            return MediaType.APPLICATION_OCTET_STREAM;
         }
     }
 

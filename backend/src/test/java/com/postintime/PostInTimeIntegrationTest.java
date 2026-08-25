@@ -406,7 +406,11 @@ class PostInTimeIntegrationTest {
             assertThat(receivedBody).contains("name=\"media\"");
             assertThat(receivedBody).contains("banner.png");
             assertThat(receivedBody).contains("image/png");
-            assertThat(receivedBody).contains("text/plain");
+            // Postman-style text parts must not include Content-Type (Spring's converter would add text/plain).
+            int titleIndex = receivedBody.indexOf("name=\"title\"");
+            int captionIndex = receivedBody.indexOf("name=\"caption\"");
+            assertThat(receivedBody.substring(titleIndex, captionIndex)).doesNotContain("Content-Type:");
+            assertThat(receivedBody.substring(captionIndex)).doesNotContain("Content-Type: text/plain");
         } finally {
             server.stop(0);
         }
