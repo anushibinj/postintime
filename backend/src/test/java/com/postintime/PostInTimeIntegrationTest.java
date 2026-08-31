@@ -52,6 +52,53 @@ class PostInTimeIntegrationTest {
     }
 
     @Test
+    void listPostsIsPaginated() throws Exception {
+        for (int i = 1; i <= 5; i++) {
+            createPost(user1Token, techChannelId, "Post " + i);
+        }
+
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts")
+                        .param("page", "0")
+                        .param("size", "2")
+                        .param("sort", "title,asc")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalItems").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.hasPrevious").value(false))
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items[0].title").value("Post 1"))
+                .andExpect(jsonPath("$.items[1].title").value("Post 2"));
+
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts")
+                        .param("page", "2")
+                        .param("size", "2")
+                        .param("sort", "title,asc")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(true))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].title").value("Post 5"));
+
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts")
+                        .param("page", "-1")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts")
+                        .param("size", "101")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void channelIsolationAndCrossChannelTargeting() throws Exception {
         UUID techPostId = createPost(user1Token, techChannelId, "Tech Post");
         createPost(user1Token, gamingChannelId, "Gaming Post");

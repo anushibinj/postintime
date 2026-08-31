@@ -1,17 +1,26 @@
 import { Button, Input, Select, Space, Typography } from 'antd';
 import { ArrowLeft, Plus } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { usePosts } from '../../hooks/usePosts';
+import { parsePageParam, parseSizeParam } from '../../hooks/postListParams';
 import { PostList } from '../../components/PostCard/PostCard';
+import { PostsPager } from '../../components/PostsPager/PostsPager';
 import type { PostStatus } from '../../types';
 
 export function PostListPage() {
   const { channelId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parsePageParam(searchParams.get('page'));
+  const size = parseSizeParam(searchParams.get('size'));
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<PostStatus | undefined>();
-  const { data: postsData, isLoading } = usePosts(channelId, { search, status, size: 20 });
+  const { data: postsData, isLoading } = usePosts(channelId, { page, size, search, status });
+
+  const updatePaging = (nextPage: number, nextSize: number) => {
+    setSearchParams({ page: String(nextPage), size: String(nextSize) });
+  };
 
   return (
     <div>
@@ -31,12 +40,23 @@ export function PostListPage() {
       </Space>
 
       <Space style={{ marginBottom: 16 }}>
-        <Input.Search placeholder="Search posts..." onSearch={setSearch} style={{ width: 300 }} allowClear />
+        <Input.Search
+          placeholder="Search posts..."
+          onSearch={(value) => {
+            setSearch(value);
+            updatePaging(0, size);
+          }}
+          style={{ width: 300 }}
+          allowClear
+        />
         <Select
           placeholder="Status"
           allowClear
           style={{ width: 120 }}
-          onChange={(v) => setStatus(v)}
+          onChange={(v) => {
+            setStatus(v);
+            updatePaging(0, size);
+          }}
           options={[
             { value: 'draft', label: 'Draft' },
             { value: 'ready', label: 'Ready' },
@@ -45,7 +65,15 @@ export function PostListPage() {
       </Space>
 
       {isLoading ? <Typography.Text>Loading...</Typography.Text> : (
-        <PostList posts={postsData?.items || []} channelId={channelId!} />
+        <>
+          <PostList posts={postsData?.items || []} channelId={channelId!} />
+          <PostsPager
+            page={postsData?.page ?? page}
+            size={postsData?.size ?? size}
+            totalItems={postsData?.totalItems ?? 0}
+            onChange={updatePaging}
+          />
+        </>
       )}
     </div>
   );

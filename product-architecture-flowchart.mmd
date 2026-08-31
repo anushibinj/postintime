@@ -3,8 +3,11 @@ flowchart TB
         UI[PostInTime UI]
         Router[React Router]
         Query[TanStack Query]
+        PostsPager[Channel posts pager]
         UI --> Router
         UI --> Query
+        UI --> PostsPager
+        PostsPager --> Query
     end
 
     subgraph API["Backend (Spring Boot)"]
