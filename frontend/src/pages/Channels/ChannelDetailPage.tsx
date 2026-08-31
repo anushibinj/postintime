@@ -1,20 +1,25 @@
 import { Button, Space, Typography } from 'antd';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchChannel } from '../../api/channels';
 import { usePosts } from '../../hooks/usePosts';
+import { parsePageParam, parseSizeParam } from '../../hooks/postListParams';
 import { PostList } from '../../components/PostCard/PostCard';
+import { PostsPager } from '../../components/PostsPager/PostsPager';
 import { ArrowLeft, Plus } from 'lucide-react';
 
 export function ChannelDetailPage() {
   const { channelId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parsePageParam(searchParams.get('page'));
+  const size = parseSizeParam(searchParams.get('size'));
   const { data: channel } = useQuery({
     queryKey: ['channel', channelId],
     queryFn: () => fetchChannel(channelId!),
     enabled: !!channelId,
   });
-  const { data: postsData } = usePosts(channelId, { size: 20, sort: 'updatedAt,desc' });
+  const { data: postsData, isLoading } = usePosts(channelId, { page, size, sort: 'updatedAt,desc' });
 
   if (!channel) return null;
 
@@ -42,7 +47,21 @@ export function ChannelDetailPage() {
       </Typography.Text>
 
       <SpaceBetween title="Posts" channelId={channelId!} />
-      <PostList posts={postsData?.items || []} channelId={channelId!} />
+      {isLoading ? (
+        <Typography.Text>Loading...</Typography.Text>
+      ) : (
+        <>
+          <PostList posts={postsData?.items || []} channelId={channelId!} />
+          <PostsPager
+            page={postsData?.page ?? page}
+            size={postsData?.size ?? size}
+            totalItems={postsData?.totalItems ?? 0}
+            onChange={(nextPage, nextSize) => {
+              setSearchParams({ page: String(nextPage), size: String(nextSize) });
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

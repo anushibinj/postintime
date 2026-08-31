@@ -91,7 +91,7 @@ All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:808
 | Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login` |
 | API tokens | `GET/POST /api/v1/api-tokens`, `PATCH/DELETE /api/v1/api-tokens/{id}`, `POST .../refresh` |
 | Channels | `GET/POST /api/v1/channels`, `GET/PATCH/DELETE /api/v1/channels/{id}` |
-| Posts | `GET/POST /api/v1/channels/{id}/posts`, `GET/PATCH/DELETE .../posts/{postId}` |
+| Posts | `GET/POST /api/v1/channels/{id}/posts` (`page`, `size` 1–100, `search`, `status`, `sort`), `GET/PATCH/DELETE .../posts/{postId}` |
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}`, `GET /api/v1/media/files/**` (optional `?size=32`…`512` for square JPEG thumbnails) |
 | Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` (posting mode: `manual` or `webhook`, optional webhook URL and Basic auth) |
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
@@ -112,5 +112,6 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
 - `POST /api/v1/public/channels/{channelId}/posts` creates a post in that channel. JSON body: `{ "title", "caption", "mediaId", "status" }`. Multipart form: `title`, `caption`, `status`, and `media` (image file). Auth is the same API token.
 - Swagger UI for those public APIs: `http://localhost:8080/swagger-ui.html` (OpenAPI at `/v3/api-docs`)
+- Channel post lists are paginated. `GET /api/v1/channels/{id}/posts` returns `items` plus `page`, `size`, `totalItems`, `totalPages`, `hasNext`, and `hasPrevious`. The channel posts UI pages through results (default 20 per page) using those query parameters.
 - Call `http://localhost:8080` from Postman (not the Vite origin). CORS allows any Origin for Bearer clients; missing tokens return 401.
 - Each social account is **Manual** (toggle published locally) or **Webhook**. Webhook accounts POST multipart `media` (optional), `title`, and `caption` to the configured URL (optional HTTP Basic), matching Postman/Bruno form-data (text fields have no part `Content-Type`). A successful webhook marks that account published on the post; failures return `PUBLISH_FAILED` with the response body.

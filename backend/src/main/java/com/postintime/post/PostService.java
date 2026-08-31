@@ -38,10 +38,19 @@ public class PostService {
         this.postTargetRepository = postTargetRepository;
     }
 
+    static final int MAX_PAGE_SIZE = 100;
+
     @Transactional(readOnly = true)
     public PageResponse<PostResponse> listPosts(UUID channelId, int page, int size, String search,
                                                 String status, String sort) {
         Channel channel = channelService.getOwnedChannel(channelId);
+        if (page < 0) {
+            throw new BusinessException("VALIDATION_ERROR", "page must be 0 or greater.");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BusinessException("VALIDATION_ERROR",
+                    "size must be between 1 and " + MAX_PAGE_SIZE + ".");
+        }
         PostStatus postStatus = parseStatus(status);
         Sort sortSpec = parseSort(sort);
         Page<Post> posts = postRepository.searchPosts(
