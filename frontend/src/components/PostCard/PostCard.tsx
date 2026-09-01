@@ -45,9 +45,18 @@ export function PostCard({ post, channelId, accounts }: { post: Post; channelId:
     },
   });
 
+  const href = `/channels/${channelId}/posts/${post.id}`;
+
   return (
-    <div
-      onClick={() => navigate(`/channels/${channelId}/posts/${post.id}`)}
+    <a
+      href={href}
+      onClick={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+          return;
+        }
+        event.preventDefault();
+        navigate(href);
+      }}
       style={{
         display: 'flex',
         gap: 12,
@@ -58,6 +67,8 @@ export function PostCard({ post, channelId, accounts }: { post: Post; channelId:
         background: '#fff',
         cursor: 'pointer',
         alignItems: 'center',
+        color: 'inherit',
+        textDecoration: 'none',
       }}
     >
       <PostThumb url={post.media?.url} title={post.title} />
@@ -88,7 +99,7 @@ export function PostCard({ post, channelId, accounts }: { post: Post; channelId:
           })}
         </div>
       )}
-    </div>
+    </a>
   );
 }
 
