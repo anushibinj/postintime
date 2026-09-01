@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# This repo uses pnpm (pnpm-lock.yaml) — never commit other package managers' lockfiles
+package-lock.json
+yarn.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
