@@ -23,3 +23,5 @@ export function AppHeader() {
     </Header>
   );
 }
+
+export default AppHeader;

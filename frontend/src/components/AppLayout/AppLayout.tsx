@@ -1,8 +1,10 @@
 import { Layout } from 'antd';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { AppHeader } from './AppHeader';
-import { AppSider } from './AppSider';
+import { PageLoader } from '../PageLoader/PageLoader';
+
+const AppHeader = lazy(() => import('./AppHeader'));
+const AppSider = lazy(() => import('./AppSider'));
 
 const { Content } = Layout;
 const SIDEBAR_COLLAPSED_KEY = 'postintime_sidebar_collapsed';
@@ -24,13 +26,21 @@ export function AppLayout() {
 
   return (
     <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-      <AppSider collapsed={collapsed} onToggle={handleToggle} />
+      <Suspense fallback={<PageLoader />}>
+        <AppSider collapsed={collapsed} onToggle={handleToggle} />
+      </Suspense>
       <Layout style={{ overflow: 'hidden' }}>
-        <AppHeader />
+        <Suspense fallback={<PageLoader />}>
+          <AppHeader />
+        </Suspense>
         <Content style={{ padding: 24, background: '#f5f5f5', overflow: 'auto' }}>
-          <Outlet />
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </Content>
       </Layout>
     </Layout>
   );
 }
+
+export default AppLayout;

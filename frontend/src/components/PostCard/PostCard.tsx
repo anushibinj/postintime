@@ -237,3 +237,5 @@ export function PostList({ posts, channelId }: { posts: Post[]; channelId: strin
     </div>
   );
 }
+
+export default PostList;

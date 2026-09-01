@@ -1,11 +1,13 @@
 import { Button, Card, Checkbox, Col, Modal, Row, Segmented, Space, Typography, message } from 'antd';
 import { ArrowLeft, Edit, ImageOff, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { usePost, useDeletePost } from '../../hooks/usePosts';
 import { useTargets, usePublishingMutations } from '../../hooks/usePublishTarget';
 import { useSocialAccounts } from '../../hooks/useSocialAccounts';
-import { PublishTargetPanel } from '../../components/PublishTarget/PublishTarget';
+import { PageLoader } from '../../components/PageLoader/PageLoader';
+
+const PublishTargetPanel = lazy(() => import('../../components/PublishTarget/PublishTarget'));
 
 export function PostDetailPage() {
   const { channelId, postId } = useParams();
@@ -164,15 +166,17 @@ export function PostDetailPage() {
         {targets.length === 0 ? (
           <Typography.Text type="secondary">No publishing targets yet. Add social accounts as targets.</Typography.Text>
         ) : (
-          targets.map((target) => (
-            <PublishTargetPanel
-              key={target.id}
-              target={target}
-              post={post}
-              channelId={channelId!}
-              postId={postId!}
-            />
-          ))
+          <Suspense fallback={<PageLoader />}>
+            {targets.map((target) => (
+              <PublishTargetPanel
+                key={target.id}
+                target={target}
+                post={post}
+                channelId={channelId!}
+                postId={postId!}
+              />
+            ))}
+          </Suspense>
         )}
       </Card>
 
@@ -193,3 +197,5 @@ export function PostDetailPage() {
     </div>
   );
 }
+
+export default PostDetailPage;
