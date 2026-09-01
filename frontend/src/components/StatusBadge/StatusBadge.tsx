@@ -13,3 +13,5 @@ export function StatusBadge({ status }: { status: TargetStatus }) {
   const config = STATUS_CONFIG[status];
   return <Tag color={config.color}>{config.label}</Tag>;
 }
+
+export default StatusBadge;

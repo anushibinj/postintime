@@ -1,10 +1,12 @@
 import { Button, Card, Col, Input, Row, Segmented, Space, Typography, message } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { MediaUploader } from '../../components/MediaUploader/MediaUploader';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useCreatePost, usePost, useUpdatePost } from '../../hooks/usePosts';
+import { PageLoader } from '../../components/PageLoader/PageLoader';
 import type { MediaInfo, PostStatus } from '../../types';
+
+const MediaUploader = lazy(() => import('../../components/MediaUploader/MediaUploader'));
 
 export function PostFormPage() {
   const { channelId, postId } = useParams();
@@ -94,7 +96,9 @@ export function PostFormPage() {
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={10}>
           <Card title="Image" styles={{ body: { minHeight: 280 } }}>
-            <MediaUploader value={media} onChange={setMedia} />
+            <Suspense fallback={<PageLoader />}>
+              <MediaUploader value={media} onChange={setMedia} />
+            </Suspense>
           </Card>
         </Col>
         <Col xs={24} lg={14}>
@@ -143,3 +147,5 @@ export function PostFormPage() {
     </div>
   );
 }
+
+export default PostFormPage;

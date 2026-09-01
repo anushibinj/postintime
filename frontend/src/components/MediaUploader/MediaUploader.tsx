@@ -124,3 +124,5 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
     </div>
   );
 }
+
+export default MediaUploader;

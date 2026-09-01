@@ -47,3 +47,5 @@ export function AppSider({ collapsed, onToggle }: { collapsed: boolean; onToggle
     </Sider>
   );
 }
+
+export default AppSider;

@@ -158,3 +158,5 @@ export function ChannelsPage() {
     </div>
   );
 }
+
+export default ChannelsPage;

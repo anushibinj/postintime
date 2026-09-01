@@ -1,10 +1,12 @@
 import { Button, Card, Modal, Space, Tooltip, Typography, message } from 'antd';
 import { Check, Copy, Download, ExternalLink, Send } from 'lucide-react';
 import type { Post, PostTarget } from '../../types';
-import { StatusBadge } from '../StatusBadge/StatusBadge';
+import { PageLoader } from '../PageLoader/PageLoader';
 import { usePublishingMutations } from '../../hooks/usePublishTarget';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
+
+const StatusBadge = lazy(() => import('../StatusBadge/StatusBadge'));
 
 interface PublishTargetProps {
   target: PostTarget;
@@ -78,7 +80,9 @@ export function PublishTargetPanel({ target, post, channelId, postId }: PublishT
         title={
           <Space>
             <Typography.Text strong>{target.socialAccount.name}</Typography.Text>
-            <StatusBadge status={target.status} />
+            <Suspense fallback={<PageLoader />}>
+              <StatusBadge status={target.status} />
+            </Suspense>
           </Space>
         }
         description={
@@ -129,3 +133,5 @@ export function PublishTargetPanel({ target, post, channelId, postId }: PublishT
     </Card>
   );
 }
+
+export default PublishTargetPanel;

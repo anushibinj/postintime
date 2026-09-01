@@ -1,12 +1,15 @@
 import { Button, Space, Typography } from 'antd';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { lazy, Suspense } from 'react';
 import { fetchChannel } from '../../api/channels';
 import { usePosts } from '../../hooks/usePosts';
 import { parsePageParam, parseSizeParam } from '../../hooks/postListParams';
-import { PostList } from '../../components/PostCard/PostCard';
-import { PostsPager } from '../../components/PostsPager/PostsPager';
+import { PageLoader } from '../../components/PageLoader/PageLoader';
 import { ArrowLeft, Plus } from 'lucide-react';
+
+const PostList = lazy(() => import('../../components/PostCard/PostCard'));
+const PostsPager = lazy(() => import('../../components/PostsPager/PostsPager'));
 
 export function ChannelDetailPage() {
   const { channelId } = useParams();
@@ -50,7 +53,7 @@ export function ChannelDetailPage() {
       {isLoading ? (
         <Typography.Text>Loading...</Typography.Text>
       ) : (
-        <>
+        <Suspense fallback={<PageLoader />}>
           <PostList posts={postsData?.items || []} channelId={channelId!} />
           <PostsPager
             page={postsData?.page ?? page}
@@ -60,11 +63,13 @@ export function ChannelDetailPage() {
               setSearchParams({ page: String(nextPage), size: String(nextSize) });
             }}
           />
-        </>
+        </Suspense>
       )}
     </div>
   );
 }
+
+export default ChannelDetailPage;
 
 function SpaceBetween({ title, channelId }: { title: string; channelId: string }) {
   const navigate = useNavigate();

@@ -30,3 +30,5 @@ export function PostsPager({
     </div>
   );
 }
+
+export default PostsPager;

@@ -1,12 +1,14 @@
 import { Button, Input, Select, Space, Typography } from 'antd';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { usePosts } from '../../hooks/usePosts';
 import { parsePageParam, parseSizeParam } from '../../hooks/postListParams';
-import { PostList } from '../../components/PostCard/PostCard';
-import { PostsPager } from '../../components/PostsPager/PostsPager';
+import { PageLoader } from '../../components/PageLoader/PageLoader';
 import type { PostStatus } from '../../types';
+
+const PostList = lazy(() => import('../../components/PostCard/PostCard'));
+const PostsPager = lazy(() => import('../../components/PostsPager/PostsPager'));
 
 export function PostListPage() {
   const { channelId } = useParams();
@@ -65,7 +67,7 @@ export function PostListPage() {
       </Space>
 
       {isLoading ? <Typography.Text>Loading...</Typography.Text> : (
-        <>
+        <Suspense fallback={<PageLoader />}>
           <PostList posts={postsData?.items || []} channelId={channelId!} />
           <PostsPager
             page={postsData?.page ?? page}
@@ -73,8 +75,10 @@ export function PostListPage() {
             totalItems={postsData?.totalItems ?? 0}
             onChange={updatePaging}
           />
-        </>
+        </Suspense>
       )}
     </div>
   );
 }
+
+export default PostListPage;
