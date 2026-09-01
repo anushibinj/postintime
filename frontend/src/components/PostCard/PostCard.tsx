@@ -128,7 +128,9 @@ function AccountToggle({
         aria-label={actionLabel}
         aria-pressed={posted}
         disabled={disabled}
+        className="post-account-toggle"
         onClick={(event) => {
+          event.preventDefault();
           event.stopPropagation();
           onToggle();
         }}
@@ -145,6 +147,7 @@ function AccountToggle({
           justifyContent: 'center',
           cursor: disabled ? 'wait' : 'pointer',
           padding: 0,
+          transition: 'box-shadow 0.15s ease, transform 0.15s ease',
         }}
       >
         <PlatformGlyph platform={account.platform} />

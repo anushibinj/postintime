@@ -6,3 +6,12 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
+.post-account-toggle:hover:not(:disabled) {
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.post-account-toggle:active:not(:disabled) {
+  transform: translateY(0);
+}
