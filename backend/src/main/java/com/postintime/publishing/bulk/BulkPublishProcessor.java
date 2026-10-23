@@ -21,7 +21,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Publishes the next due post from the bulk publishing queues. Each call handles a single post and
@@ -68,7 +70,7 @@ public class BulkPublishProcessor {
     }
 
     private record Claim(UUID itemId, UUID jobId, UUID channelId, boolean channelEnabled, Post post,
-                         int position, Instant scheduledAt) {
+                         int position, Instant scheduledAt, Set<UUID> accountIds) {
     }
 
     private record Outcome(BulkPublishItemStatus status, String error) {
@@ -117,7 +119,8 @@ public class BulkPublishProcessor {
         item.setProcessedAt(Instant.now());
         itemRepository.save(item);
         return Optional.of(new Claim(item.getId(), job.getId(), job.getChannel().getId(),
-                job.getChannel().isEnabled(), item.getPost(), item.getPosition(), item.getScheduledAt()));
+                job.getChannel().isEnabled(), item.getPost(), item.getPosition(), item.getScheduledAt(),
+                job.getSocialAccounts().stream().map(SocialAccount::getId).collect(Collectors.toSet())));
     }
 
     private Outcome publish(Claim claim) {
@@ -127,6 +130,7 @@ public class BulkPublishProcessor {
         Post post = claim.post();
         List<SocialAccount> accounts = socialAccountRepository
                 .findByChannelIdOrderByNameAsc(claim.channelId()).stream()
+                .filter(account -> claim.accountIds().contains(account.getId()))
                 .filter(SocialAccount::isEnabled)
                 .filter(account -> account.getPostingMode() == PostingMode.WEBHOOK)
                 .toList();
@@ -162,8 +166,8 @@ public class BulkPublishProcessor {
                 return new Outcome(BulkPublishItemStatus.PUBLISHED, null);
             }
             return new Outcome(BulkPublishItemStatus.SKIPPED, accounts.isEmpty()
-                    ? "No enabled webhook social accounts."
-                    : "Already published to every webhook social account.");
+                    ? "None of the picked social accounts is an enabled webhook account."
+                    : "Already published to every picked social account.");
         }
         return new Outcome(published > 0 ? BulkPublishItemStatus.PARTIAL : BulkPublishItemStatus.FAILED,
                 String.join("\n", failures));

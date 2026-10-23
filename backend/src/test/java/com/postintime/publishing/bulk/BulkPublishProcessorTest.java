@@ -45,6 +45,7 @@ class BulkPublishProcessorTest {
     private SocialAccount failing;
     private SocialAccount working;
     private SocialAccount manual;
+    private SocialAccount disabled;
 
     @BeforeEach
     void setUp() {
@@ -54,7 +55,7 @@ class BulkPublishProcessorTest {
         failing = account("A failing", PostingMode.WEBHOOK, true);
         working = account("B working", PostingMode.WEBHOOK, true);
         manual = account("C manual", PostingMode.MANUAL, true);
-        SocialAccount disabled = account("D disabled", PostingMode.WEBHOOK, false);
+        disabled = account("D disabled", PostingMode.WEBHOOK, false);
         when(socialAccountRepository.findByChannelIdOrderByNameAsc(channel.getId()))
                 .thenReturn(List.of(failing, working, manual, disabled));
         when(postTargetRepository.findByPostIdAndSocialAccountId(any(), any())).thenReturn(Optional.empty());
@@ -132,6 +133,20 @@ class BulkPublishProcessorTest {
         verify(publishingService, never()).publishToWebhookAccount(any(), any());
         assertThat(job.getItems().get(0).getStatus()).isEqualTo(BulkPublishItemStatus.SKIPPED);
         assertThat(job.getStatus()).isEqualTo(BulkPublishJobStatus.COMPLETED);
+    }
+
+    @Test
+    void postsOnlyToTheAccountsPickedForTheJob() {
+        BulkPublishJob job = job(5, Instant.now(), post("Only"));
+        job.getSocialAccounts().remove(failing);
+        when(publishingService.publishToWebhookAccount(any(), any())).thenReturn(PublishResult.ok());
+        when(itemRepository.lockNextDueItem(any())).thenReturn(Optional.of(job.getItems().get(0)));
+
+        processor.processNextDueItem();
+
+        verify(publishingService).publishToWebhookAccount(job.getItems().get(0).getPost(), working);
+        verify(publishingService, never()).publishToWebhookAccount(any(), eq(failing));
+        assertThat(job.getItems().get(0).getStatus()).isEqualTo(BulkPublishItemStatus.PUBLISHED);
     }
 
     @Test
@@ -245,6 +260,7 @@ class BulkPublishProcessorTest {
         job.setId(UUID.randomUUID());
         job.setChannel(channel);
         job.setIntervalMinutes(intervalMinutes);
+        job.getSocialAccounts().addAll(List.of(failing, working, manual, disabled));
         for (int i = 0; i < posts.length; i++) {
             BulkPublishItem item = new BulkPublishItem();
             item.setId(UUID.randomUUID());
