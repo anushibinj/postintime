@@ -49,6 +49,9 @@ app:
     secret-key: ${STORAGE_SECRET_KEY:minioadmin}
     bucket: ${STORAGE_BUCKET:postintime}
     region: ${STORAGE_REGION:us-east-1}
+  webhook:
+    # How long to wait for a webhook (social media post) to respond, e.g. 15m or 900s.
+    read-timeout: ${WEBHOOK_READ_TIMEOUT:15m}
   bulk-publish:
     # How often the backend checks for bulk publish posts that are due (milliseconds).
     poll-interval-ms: ${BULK_PUBLISH_POLL_INTERVAL_MS:10000}
