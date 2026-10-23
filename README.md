@@ -95,7 +95,7 @@ All APIs are under `/api/v1`. Call the Spring Boot server (`http://localhost:808
 | Media | `POST /api/v1/media`, `DELETE /api/v1/media/{id}`, `GET /api/v1/media/files/**` (optional `?size=32`…`512` for square JPEG thumbnails) |
 | Social Accounts | `GET/POST /api/v1/channels/{id}/social-accounts` (posting mode: `manual` or `webhook`, optional webhook URL and Basic auth) |
 | Publishing | `GET/POST .../posts/{postId}/targets`, `POST .../targets/toggle`, `POST .../targets/{id}/publish`, `POST .../mark-published` |
-| Bulk publishing | `GET/POST /api/v1/channels/{id}/bulk-publish-jobs` (`postIds`, `intervalMinutes` 5–30 in steps of 5, default 5; appends to the channel queue), `GET .../bulk-publish-jobs/{jobId}`, `POST .../{jobId}/cancel`, `POST .../{jobId}/items/{itemId}/cancel` (remove one post from the queue) |
+| Bulk publishing | `GET/POST /api/v1/channels/{id}/bulk-publish-jobs` (`postIds`, `intervalMinutes` 5–30 in steps of 5, default 5, `socialAccountIds` enabled webhook accounts to post to, default all; appends to the channel queue), `GET .../bulk-publish-jobs/{jobId}`, `POST .../{jobId}/cancel`, `POST .../{jobId}/items/{itemId}/cancel` (remove one post from the queue) |
 | Public | `GET /api/v1/public/channels`, `POST /api/v1/public/channels/{channelId}/posts` (API token) |
 
 Public API docs (list channels and create posts): [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). OpenAPI JSON: `/v3/api-docs`. Click **Authorize** and paste a `pit_…` token.
