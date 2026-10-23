@@ -558,6 +558,15 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.code").value("NO_WEBHOOK_ACCOUNTS"));
 
         createWebhookAccount(techChannelId, "Bulk hook", "http://127.0.0.1:1/never-called");
+        UUID gamingAccountId = createWebhookAccount(gamingChannelId, "Gaming hook", "http://127.0.0.1:1/never-called");
+        for (UUID[] accountIds : new UUID[][]{{}, {gamingAccountId}}) {
+            mockMvc.perform(post(base)
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(5, accountIds, postId)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        }
         for (int interval : new int[]{0, 7, 35}) {
             mockMvc.perform(post(base)
                             .header("Authorization", "Bearer " + user1Token)
@@ -662,6 +671,39 @@ class PostInTimeIntegrationTest {
                             .header("Authorization", "Bearer " + user1Token))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].id").value(jobId.toString()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void bulkPublishPostsOnlyToThePickedAccounts() throws Exception {
+        java.util.List<String> received = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            received.add(exchange.getRequestURI().getPath());
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'CANCELLED' WHERE status = 'PENDING'");
+        try {
+            String root = "http://127.0.0.1:" + server.getAddress().getPort();
+            UUID picked = createWebhookAccount(techChannelId, "Picked hook", root + "/picked");
+            createWebhookAccount(techChannelId, "Unpicked hook", root + "/unpicked");
+            UUID postId = createPost(user1Token, techChannelId, "Bulk Picked");
+
+            mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/bulk-publish-jobs")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(5, new UUID[]{picked}, postId)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.socialAccountIds").value(
+                            org.hamcrest.Matchers.contains(picked.toString())));
+
+            assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
+            assertThat(received).containsExactly("/picked");
         } finally {
             server.stop(0);
         }
@@ -887,11 +929,21 @@ class PostInTimeIntegrationTest {
     }
 
     private String bulkBody(int intervalMinutes, UUID... postIds) {
+        return bulkBody(intervalMinutes, null, postIds);
+    }
+
+    private String bulkBody(int intervalMinutes, UUID[] socialAccountIds, UUID... postIds) {
         var node = objectMapper.createObjectNode();
         node.put("intervalMinutes", intervalMinutes);
         var array = node.putArray("postIds");
         for (UUID id : postIds) {
             array.add(id.toString());
+        }
+        if (socialAccountIds != null) {
+            var accounts = node.putArray("socialAccountIds");
+            for (UUID id : socialAccountIds) {
+                accounts.add(id.toString());
+            }
         }
         return node.toString();
     }

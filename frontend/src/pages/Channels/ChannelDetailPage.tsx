@@ -72,9 +72,9 @@ export function ChannelDetailPage() {
     });
   };
 
-  const handleStartBulk = async (intervalMinutes: number) => {
+  const handleStartBulk = async (intervalMinutes: number, socialAccountIds: string[]) => {
     try {
-      await createBulkJob.mutateAsync({ postIds: [...selected.keys()], intervalMinutes });
+      await createBulkJob.mutateAsync({ postIds: [...selected.keys()], intervalMinutes, socialAccountIds });
       message.success(`Added ${selected.size} ${selected.size === 1 ? 'post' : 'posts'} to the bulk posting queue`);
       setBulkModalOpen(false);
       setSelection({ channelId, posts: new Map() });

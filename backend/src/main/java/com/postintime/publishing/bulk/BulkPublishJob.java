@@ -1,6 +1,7 @@
 package com.postintime.publishing.bulk;
 
 import com.postintime.channel.Channel;
+import com.postintime.social.SocialAccount;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +9,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -20,7 +23,9 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -47,6 +52,13 @@ public class BulkPublishJob {
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<BulkPublishItem> items = new ArrayList<>();
+
+    /** The social accounts every post of this job goes to. */
+    @ManyToMany
+    @JoinTable(name = "bulk_publish_job_accounts",
+            joinColumns = @JoinColumn(name = "job_id"),
+            inverseJoinColumns = @JoinColumn(name = "social_account_id"))
+    private Set<SocialAccount> socialAccounts = new HashSet<>();
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

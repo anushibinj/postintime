@@ -29,8 +29,15 @@ export function useBulkPublishMutations(channelId: string) {
 
   return {
     create: useMutation({
-      mutationFn: ({ postIds, intervalMinutes }: { postIds: string[]; intervalMinutes: number }) =>
-        createBulkPublishJob(channelId, postIds, intervalMinutes),
+      mutationFn: ({
+        postIds,
+        intervalMinutes,
+        socialAccountIds,
+      }: {
+        postIds: string[];
+        intervalMinutes: number;
+        socialAccountIds: string[];
+      }) => createBulkPublishJob(channelId, postIds, intervalMinutes, socialAccountIds),
       onSuccess: invalidate,
     }),
     cancel: useMutation({

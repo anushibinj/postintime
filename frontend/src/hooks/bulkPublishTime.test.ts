@@ -14,6 +14,7 @@ function job(items: Partial<BulkPublishItem>[]): BulkPublishJob {
     totalItems: items.length,
     processedItems: 0,
     failedItems: 0,
+    socialAccountIds: ['account'],
     createdAt: new Date(now).toISOString(),
     updatedAt: new Date(now).toISOString(),
     items: items.map((item, position) => ({
