@@ -4,10 +4,13 @@ flowchart TB
         Router[React Router]
         Query[TanStack Query]
         PostsPager[Channel posts pager]
+        BulkUI[Multiselect + bulk post modal<br/>interval slider 5-30 min]
         UI --> Router
         UI --> Query
         UI --> PostsPager
+        UI --> BulkUI
         PostsPager --> Query
+        BulkUI --> Query
     end
 
     subgraph API["Backend (Spring Boot)"]
@@ -19,6 +22,8 @@ flowchart TB
         MediaThumbs[Thumbnails ?size=]
         Social[Social Account Module]
         Publishing[Publishing Module]
+        BulkPublish[Bulk Publish Jobs API]
+        BulkScheduler[Bulk Publish Scheduler<br/>one post per interval, sequential]
         Public[Public API]
         Swagger[Swagger UI]
         Auth --> Channels
@@ -32,6 +37,9 @@ flowchart TB
         Channels --> Social
         Posts --> Publishing
         Social --> Publishing
+        Channels --> BulkPublish
+        BulkPublish --> BulkScheduler
+        BulkScheduler --> Publishing
         Media --> Posts
         Media --> MediaThumbs
     end
@@ -47,6 +55,8 @@ flowchart TB
     Posts --> PG
     Social --> PG
     Publishing --> PG
+    BulkPublish --> PG
+    BulkScheduler --> PG
     Media --> Storage
     Media --> PG
 
