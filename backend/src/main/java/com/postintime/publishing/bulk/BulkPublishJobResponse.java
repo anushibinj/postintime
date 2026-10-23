@@ -14,6 +14,7 @@ public record BulkPublishJobResponse(
         int processedItems,
         int failedItems,
         List<BulkPublishItemResponse> items,
+        List<UUID> socialAccountIds,
         Instant createdAt,
         Instant updatedAt
 ) {

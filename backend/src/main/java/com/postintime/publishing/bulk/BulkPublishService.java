@@ -7,6 +7,7 @@ import com.postintime.common.error.ResourceNotFoundException;
 import com.postintime.post.Post;
 import com.postintime.post.PostRepository;
 import com.postintime.social.PostingMode;
+import com.postintime.social.SocialAccount;
 import com.postintime.social.SocialAccountRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,10 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -63,12 +66,7 @@ public class BulkPublishService {
         channelService.ensureChannelEnabled(channel);
         int interval = resolveInterval(request.intervalMinutes());
 
-        boolean hasWebhookAccount = socialAccountRepository.findByChannelIdOrderByNameAsc(channelId).stream()
-                .anyMatch(account -> account.isEnabled() && account.getPostingMode() == PostingMode.WEBHOOK);
-        if (!hasWebhookAccount) {
-            throw new BusinessException("NO_WEBHOOK_ACCOUNTS",
-                    "Bulk posting needs at least one enabled webhook social account in this channel.");
-        }
+        List<SocialAccount> accounts = resolveAccounts(channelId, request.socialAccountIds());
 
         List<Post> posts = new ArrayList<>();
         for (UUID postId : new LinkedHashSet<>(request.postIds())) {
@@ -95,6 +93,7 @@ public class BulkPublishService {
         BulkPublishJob job = new BulkPublishJob();
         job.setChannel(channel);
         job.setIntervalMinutes(interval);
+        job.getSocialAccounts().addAll(accounts);
         int position = 0;
         for (Post post : posts) {
             BulkPublishItem item = new BulkPublishItem();
@@ -158,6 +157,35 @@ public class BulkPublishService {
         return toResponse(jobRepository.save(job));
     }
 
+    /**
+     * The enabled webhook accounts to post to: the requested ones, or every one in the channel when
+     * none were requested.
+     */
+    private List<SocialAccount> resolveAccounts(UUID channelId, List<UUID> requestedIds) {
+        List<SocialAccount> webhookAccounts = socialAccountRepository.findByChannelIdOrderByNameAsc(channelId).stream()
+                .filter(account -> account.isEnabled() && account.getPostingMode() == PostingMode.WEBHOOK)
+                .toList();
+        if (webhookAccounts.isEmpty()) {
+            throw new BusinessException("NO_WEBHOOK_ACCOUNTS",
+                    "Bulk posting needs at least one enabled webhook social account in this channel.");
+        }
+        if (requestedIds == null) {
+            return webhookAccounts;
+        }
+        if (requestedIds.isEmpty()) {
+            throw new BusinessException("VALIDATION_ERROR", "Pick at least one social account to post to.");
+        }
+        Set<UUID> requested = new HashSet<>(requestedIds);
+        List<SocialAccount> picked = webhookAccounts.stream()
+                .filter(account -> requested.contains(account.getId()))
+                .toList();
+        if (picked.size() != requested.size()) {
+            throw new BusinessException("VALIDATION_ERROR",
+                    "Bulk posting can only post to enabled webhook social accounts of this channel.");
+        }
+        return picked;
+    }
+
     private BulkPublishJob lockRunningJob(UUID channelId, UUID jobId) {
         channelService.getOwnedChannel(channelId);
         // Locks the job so changes wait for a post that is being published right now.
@@ -219,6 +247,7 @@ public class BulkPublishService {
                 processed,
                 failed,
                 items,
+                job.getSocialAccounts().stream().map(SocialAccount::getId).sorted().toList(),
                 job.getCreatedAt(),
                 job.getUpdatedAt()
         );
