@@ -130,7 +130,7 @@ function JobBody({ job }: { job: BulkPublishJob }) {
         {job.status === 'running' && job.nextRunAt
           ? `Next post at ${format(new Date(job.nextRunAt), 'h:mm a')}`
           : null}
-        {job.failedItems > 0 ? `${job.status === 'running' ? ' · ' : ''}${job.failedItems} failed` : null}
+        {job.failedItems > 0 ? `${job.status === 'running' ? ' · ' : ''}${job.failedItems} with failures` : null}
       </Typography.Text>
       <ol style={{ margin: 0, paddingLeft: 20 }}>
         {job.items.map((item) => {
