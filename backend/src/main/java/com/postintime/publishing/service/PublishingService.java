@@ -25,7 +25,6 @@ import com.postintime.social.SocialAccount;
 import com.postintime.social.SocialAccountRepository;
 import com.postintime.social.SocialAccountService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -93,7 +92,8 @@ public class PublishingService {
         return results;
     }
 
-    @Transactional
+    // Not @Transactional: a webhook can take up to app.webhook.read-timeout (15 minutes), and no DB
+    // connection or row lock should be held while waiting. Each repository call commits on its own.
     public PublishActionResponse publish(UUID channelId, UUID postId, UUID targetId) {
         PostTarget target = getOwnedTarget(channelId, postId, targetId);
         ensureNotQueued(postId);
@@ -148,7 +148,7 @@ public class PublishingService {
         return toResponse(postTargetRepository.save(target));
     }
 
-    @Transactional
+    // Not @Transactional for the same reason as publish(): the webhook call can be slow.
     public TargetResponse togglePublished(UUID channelId, UUID postId, TogglePublishedRequest request) {
         Post post = postService.getOwnedPost(channelId, postId);
         ensureNotQueued(post.getId());
@@ -194,10 +194,9 @@ public class PublishingService {
     /**
      * Publishes a post to one webhook account without ownership checks (used by background jobs
      * such as bulk publishing). The outcome is recorded on the post target; publisher failures are
-     * returned, never thrown. Runs in its own transaction so the target's outcome is committed
-     * right away and an unexpected error cannot roll back the caller's transaction.
+     * returned, never thrown. Deliberately runs outside any transaction: the webhook can take up to
+     * app.webhook.read-timeout, and the target's outcome is saved (and committed) once it answers.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PublishResult publishToWebhookAccount(Post post, SocialAccount account) {
         PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
                 .orElseGet(() -> {
