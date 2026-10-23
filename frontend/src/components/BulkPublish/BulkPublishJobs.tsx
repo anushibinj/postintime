@@ -1,5 +1,7 @@
 import { Button, Card, Collapse, Popconfirm, Progress, Space, Tag, Typography, message } from 'antd';
 import { format } from 'date-fns';
+import { useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { BulkPublishItemStatus, BulkPublishJob, BulkPublishJobStatus } from '../../types';
 import { useBulkPublishJobs, useBulkPublishMutations } from '../../hooks/useBulkPublish';
 
@@ -19,8 +21,23 @@ const ITEM_STATUS: Record<BulkPublishItemStatus, { color: string; label: string 
 };
 
 export function BulkPublishJobs({ channelId }: { channelId: string }) {
-  const { data: jobs = [] } = useBulkPublishJobs(channelId);
+  const { data } = useBulkPublishJobs(channelId);
+  const jobs = data ?? [];
   const { cancel } = useBulkPublishMutations(channelId);
+  const queryClient = useQueryClient();
+
+  // Refresh the post list (published badges) whenever a job publishes another post.
+  const progressKey = data?.map((job) => `${job.id}:${job.processedItems}`).join(',');
+  const lastProgressKey = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (progressKey === undefined) {
+      return;
+    }
+    if (lastProgressKey.current !== undefined && lastProgressKey.current !== progressKey) {
+      queryClient.invalidateQueries({ queryKey: ['posts', channelId] });
+    }
+    lastProgressKey.current = progressKey;
+  }, [progressKey, channelId, queryClient]);
 
   if (jobs.length === 0) {
     return null;
