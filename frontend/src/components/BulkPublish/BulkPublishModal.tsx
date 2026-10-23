@@ -1,4 +1,4 @@
-import { Alert, Modal, Slider, Space, Tag, Typography } from 'antd';
+import { Alert, Checkbox, Modal, Slider, Typography } from 'antd';
 import { useState } from 'react';
 import type { SocialAccount } from '../../types';
 import {
@@ -27,7 +27,7 @@ interface BulkPublishModalProps {
   queuedCount: number;
   submitting: boolean;
   onCancel: () => void;
-  onSubmit: (intervalMinutes: number) => void;
+  onSubmit: (intervalMinutes: number, socialAccountIds: string[]) => void;
 }
 
 export function BulkPublishModal({
@@ -41,10 +41,13 @@ export function BulkPublishModal({
   onSubmit,
 }: BulkPublishModalProps) {
   const [interval, setIntervalMinutes] = useState(BULK_INTERVAL_DEFAULT);
+  // Accounts the user unticked; every other webhook account is picked, including ones that load later.
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const now = useNow();
   const enabled = accounts.filter((account) => account.enabled);
   const webhookAccounts = enabled.filter((account) => account.postingMode === 'webhook');
   const manualAccounts = enabled.filter((account) => account.postingMode === 'manual');
+  const pickedIds = webhookAccounts.filter((account) => !excludedIds.has(account.id)).map((account) => account.id);
   const first = firstSlot(queueTail, interval, now);
   const last = first + Math.max(0, posts.length - 1) * interval * 60_000;
   const startsNow = first <= now;
@@ -55,13 +58,14 @@ export function BulkPublishModal({
       title={`Bulk post ${posts.length} ${plural}`}
       open={open}
       onCancel={onCancel}
-      onOk={() => onSubmit(interval)}
+      onOk={() => onSubmit(interval, pickedIds)}
       okText="Start bulk posting"
-      okButtonProps={{ disabled: webhookAccounts.length === 0 || posts.length === 0 }}
+      okButtonProps={{ disabled: pickedIds.length === 0 || posts.length === 0 }}
       confirmLoading={submitting}
       afterOpenChange={(visible) => {
         if (!visible) {
           setIntervalMinutes(BULK_INTERVAL_DEFAULT);
+          setExcludedIds(new Set());
         }
       }}
     >
@@ -98,12 +102,37 @@ export function BulkPublishModal({
         />
       ) : (
         <div style={{ marginBottom: 16 }}>
-          <Typography.Text strong>Posting to</Typography.Text>
-          <Space size={[4, 4]} wrap style={{ display: 'flex', marginTop: 8 }}>
-            {webhookAccounts.map((account) => (
-              <Tag key={account.id}>{account.name}</Tag>
-            ))}
-          </Space>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography.Text strong>Post to</Typography.Text>
+            {webhookAccounts.length > 1 && (
+              <Checkbox
+                checked={pickedIds.length === webhookAccounts.length}
+                indeterminate={pickedIds.length > 0 && pickedIds.length < webhookAccounts.length}
+                onChange={(event) =>
+                  setExcludedIds(
+                    event.target.checked ? new Set() : new Set(webhookAccounts.map((account) => account.id)),
+                  )
+                }
+              >
+                All accounts
+              </Checkbox>
+            )}
+          </div>
+          <Checkbox.Group
+            value={pickedIds}
+            onChange={(values) =>
+              setExcludedIds(
+                new Set(webhookAccounts.map((account) => account.id).filter((id) => !values.includes(id))),
+              )
+            }
+            options={webhookAccounts.map((account) => ({ label: account.name, value: account.id }))}
+            style={{ display: 'flex', flexWrap: 'wrap', rowGap: 4, marginTop: 8 }}
+          />
+          {pickedIds.length === 0 && (
+            <Typography.Paragraph type="danger" style={{ margin: '8px 0 0', fontSize: 12 }}>
+              Pick at least one social account to start bulk posting.
+            </Typography.Paragraph>
+          )}
           {manualAccounts.length > 0 && (
             <Typography.Paragraph type="secondary" style={{ margin: '8px 0 0', fontSize: 12 }}>
               Manual accounts ({manualAccounts.map((account) => account.name).join(', ')}) are skipped.

@@ -50,7 +50,7 @@ describe('BulkPublishModal', () => {
     expect(screen.getByText(/last post goes live at .*\(in 20 min\)/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /start bulk posting/i }));
-    expect(onSubmit).toHaveBeenCalledWith(10);
+    expect(onSubmit).toHaveBeenCalledWith(10, ['a1']);
   });
 
   it('queues new posts behind the posts already waiting', () => {
@@ -92,5 +92,41 @@ describe('BulkPublishModal', () => {
 
     expect(screen.getByText('No webhook social accounts')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start bulk posting/i })).toBeDisabled();
+  });
+
+  it('posts only to the picked accounts and needs at least one', () => {
+    const onSubmit = vi.fn();
+    render(
+      <BulkPublishModal
+        open
+        posts={posts}
+        accounts={[
+          account({ id: 'a1', name: 'LinkedIn hook' }),
+          account({ id: 'a2', name: 'X hook', platform: 'x' }),
+          account({ id: 'a3', name: 'Manual IG', postingMode: 'manual' }),
+        ]}
+        queueTail={null}
+        queuedCount={0}
+        submitting={false}
+        onCancel={() => {}}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const start = screen.getByRole('button', { name: /start bulk posting/i });
+    expect(screen.getByRole('checkbox', { name: 'LinkedIn hook' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'X hook' })).toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'Manual IG' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'LinkedIn hook' }));
+    fireEvent.click(start);
+    expect(onSubmit).toHaveBeenLastCalledWith(5, ['a2']);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'All accounts' }));
+    expect(screen.getByRole('checkbox', { name: 'X hook' })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'All accounts' }));
+    expect(screen.getByRole('checkbox', { name: 'X hook' })).not.toBeChecked();
+    expect(screen.getByText(/Pick at least one social account/)).toBeInTheDocument();
+    expect(start).toBeDisabled();
   });
 });
