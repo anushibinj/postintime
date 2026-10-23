@@ -178,13 +178,45 @@ public class PublishingService {
                     result.errorMessage() != null ? result.errorMessage() : "Webhook publish failed."
             );
         }
+        applySuccess(target, result);
+        postTargetRepository.save(target);
+    }
+
+    /**
+     * Publishes a post to one webhook account without ownership checks (used by background jobs
+     * such as bulk publishing). The outcome is recorded on the post target; publisher failures are
+     * returned, never thrown.
+     */
+    @Transactional
+    public PublishResult publishToWebhookAccount(Post post, SocialAccount account) {
+        PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
+                .orElseGet(() -> {
+                    PostTarget created = new PostTarget();
+                    created.setPost(post);
+                    created.setSocialAccount(account);
+                    return created;
+                });
+        target.setPublishingMode(PostingMode.WEBHOOK);
+        SocialMediaPublisher publisher = publisherFactory.getPublisher(PostingMode.WEBHOOK);
+        PublishResult result = publisher.publish(new PublishContext(post, account, target));
+        if (result.success()) {
+            applySuccess(target, result);
+        } else {
+            target.setStatus(TargetStatus.FAILED);
+            target.setErrorCode(result.errorCode());
+            target.setErrorMessage(result.errorMessage());
+        }
+        postTargetRepository.save(target);
+        return result;
+    }
+
+    private void applySuccess(PostTarget target, PublishResult result) {
         target.setStatus(TargetStatus.PUBLISHED);
         target.setPublishedAt(Instant.now());
         target.setErrorCode(null);
         target.setErrorMessage(null);
         target.setExternalPostId(result.externalPostId());
         target.setExternalUrl(result.externalUrl());
-        postTargetRepository.save(target);
     }
 
     private PostTarget getOwnedTarget(UUID channelId, UUID postId, UUID targetId) {
