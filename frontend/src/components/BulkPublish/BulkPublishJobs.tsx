@@ -1,4 +1,4 @@
-import { Button, Card, Collapse, Popconfirm, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { Button, Collapse, Popconfirm, Space, Tag, Tooltip, Typography, message } from 'antd';
 import { X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect, useRef } from 'react';
@@ -81,62 +81,76 @@ export function BulkPublishJobs({ channelId }: { channelId: string }) {
   return (
     <div style={{ marginBottom: 16 }}>
       {queue.length > 0 && (
-        <Card
+        <Collapse
           size="small"
           style={{ marginBottom: 8 }}
-          title={
-            <Space size={8}>
-              <Typography.Text strong>Bulk posting queue</Typography.Text>
-              <Tag color="processing">{queue.length} {queue.length === 1 ? 'post' : 'posts'}</Tag>
-            </Space>
-          }
-          extra={
-            <Popconfirm
-              title="Cancel all queued posts?"
-              description="Posts that have not gone live yet will not be posted."
-              okText="Cancel all"
-              cancelText="Keep them"
-              onConfirm={handleCancelAll}
-            >
-              <Button size="small" danger loading={cancel.isPending}>
-                Cancel all
-              </Button>
-            </Popconfirm>
-          }
-        >
-          <ol style={{ margin: 0, paddingLeft: 20 }}>
-            {queue.map((entry) => (
-              <li key={entry.item.id} style={{ marginBottom: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {entry.item.status === 'publishing' ? (
-                    <Tag color="processing" style={{ marginInlineEnd: 0 }}>Posting now</Tag>
-                  ) : (
-                    <Typography.Text strong style={{ flexShrink: 0 }}>
-                      {formatQueuedAt(Date.parse(entry.item.scheduledAt), now)}
-                    </Typography.Text>
-                  )}
-                  <Typography.Text ellipsis style={{ flex: 1, minWidth: 0 }}>
-                    {entry.item.postTitle}
+          items={[
+            {
+              key: 'queue',
+              label: (
+                <Space size={8} wrap>
+                  <Typography.Text strong>Bulk posting queue</Typography.Text>
+                  <Tag color="processing">{queue.length} {queue.length === 1 ? 'post' : 'posts'}</Tag>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {queue[0].item.status === 'publishing'
+                      ? 'Posting now'
+                      : `Next ${formatQueuedAt(Date.parse(queue[0].item.scheduledAt), now)}`}
                   </Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
-                    {entry.job.intervalMinutes} min gap
-                  </Typography.Text>
-                  <Tooltip title={entry.item.status === 'publishing' ? 'Being posted right now' : 'Remove from queue'}>
-                    <Button
-                      size="small"
-                      type="text"
-                      aria-label={`Remove ${entry.item.postTitle} from the queue`}
-                      icon={<X size={14} />}
-                      disabled={entry.item.status === 'publishing'}
-                      loading={cancelItem.isPending && cancelItem.variables?.itemId === entry.item.id}
-                      onClick={() => handleRemove(entry)}
-                    />
-                  </Tooltip>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Card>
+                </Space>
+              ),
+              extra: (
+                // Keep clicks on the button from toggling the panel.
+                <span onClick={(event) => event.stopPropagation()}>
+                  <Popconfirm
+                    title="Cancel all queued posts?"
+                    description="Posts that have not gone live yet will not be posted."
+                    okText="Cancel all"
+                    cancelText="Keep them"
+                    onConfirm={handleCancelAll}
+                  >
+                    <Button size="small" danger loading={cancel.isPending}>
+                      Cancel all
+                    </Button>
+                  </Popconfirm>
+                </span>
+              ),
+              children: (
+                <ol style={{ margin: 0, paddingLeft: 20 }}>
+                  {queue.map((entry) => (
+                    <li key={entry.item.id} style={{ marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {entry.item.status === 'publishing' ? (
+                          <Tag color="processing" style={{ marginInlineEnd: 0 }}>Posting now</Tag>
+                        ) : (
+                          <Typography.Text strong style={{ flexShrink: 0 }}>
+                            {formatQueuedAt(Date.parse(entry.item.scheduledAt), now)}
+                          </Typography.Text>
+                        )}
+                        <Typography.Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+                          {entry.item.postTitle}
+                        </Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
+                          {entry.job.intervalMinutes} min gap
+                        </Typography.Text>
+                        <Tooltip title={entry.item.status === 'publishing' ? 'Being posted right now' : 'Remove from queue'}>
+                          <Button
+                            size="small"
+                            type="text"
+                            aria-label={`Remove ${entry.item.postTitle} from the queue`}
+                            icon={<X size={14} />}
+                            disabled={entry.item.status === 'publishing'}
+                            loading={cancelItem.isPending && cancelItem.variables?.itemId === entry.item.id}
+                            onClick={() => handleRemove(entry)}
+                          />
+                        </Tooltip>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ),
+            },
+          ]}
+        />
       )}
       {recent.length > 0 && (
         <Collapse
