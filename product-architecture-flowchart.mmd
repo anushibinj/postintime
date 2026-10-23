@@ -23,7 +23,7 @@ flowchart TB
         Social[Social Account Module]
         Publishing[Publishing Module]
         BulkPublish[Bulk Publish Jobs API<br/>appends to per-channel queue]
-        BulkScheduler[Bulk Publish Scheduler<br/>earliest due queued post, sequential]
+        BulkScheduler[Bulk Publish Scheduler<br/>claim earliest due post, call webhooks outside DB tx,<br/>record result; sequential]
         Public[Public API]
         Swagger[Swagger UI]
         Auth --> Channels
@@ -75,7 +75,7 @@ flowchart TB
 
     subgraph Future["Publishing adapters"]
         Manual[ManualSocialMediaPublisher]
-        Webhook[WebhookSocialMediaPublisher]
+        Webhook[WebhookSocialMediaPublisher<br/>read timeout 15 min]
         LinkedIn[LinkedInPublisher]
         Instagram[InstagramPublisher]
         Publishing --> Manual

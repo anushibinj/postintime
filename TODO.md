@@ -41,3 +41,5 @@
 - [x] Update the frontend app title to "Postintme"
 - [x] Multiselect posts inside a channel and bulk post them to social media one after another, with a 5–30 minute interval slider (step 5, default 5). Failures are logged and skipped.
 - [x] Keep bulk posting in a per-channel queue in the DB: new batches line up behind queued posts, queued posts are locked from individual posting and show "Queued for posting at x (in y min)".
+- [x] Wait at least 15 minutes for slow posting webhooks (backend `WEBHOOK_READ_TIMEOUT`, frontend fetch client) without holding DB transactions open.
+- [ ] When deploying to Cloud Run, set the service request timeout to at least 900 seconds so slow posts are not cut off.
