@@ -11,6 +11,8 @@ import com.postintime.publishing.api.PublishInstructionsResponse;
 import com.postintime.publishing.api.SocialAccountSummary;
 import com.postintime.publishing.api.TargetResponse;
 import com.postintime.publishing.api.TogglePublishedRequest;
+import com.postintime.publishing.bulk.BulkPublishItemRepository;
+import com.postintime.publishing.bulk.BulkPublishItemStatus;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.PublishContext;
@@ -39,17 +41,20 @@ public class PublishingService {
     private final SocialAccountService socialAccountService;
     private final SocialAccountRepository socialAccountRepository;
     private final PublisherFactory publisherFactory;
+    private final BulkPublishItemRepository bulkPublishItemRepository;
 
     public PublishingService(PostTargetRepository postTargetRepository,
                              PostService postService,
                              SocialAccountService socialAccountService,
                              SocialAccountRepository socialAccountRepository,
-                             PublisherFactory publisherFactory) {
+                             PublisherFactory publisherFactory,
+                             BulkPublishItemRepository bulkPublishItemRepository) {
         this.postTargetRepository = postTargetRepository;
         this.postService = postService;
         this.socialAccountService = socialAccountService;
         this.socialAccountRepository = socialAccountRepository;
         this.publisherFactory = publisherFactory;
+        this.bulkPublishItemRepository = bulkPublishItemRepository;
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +96,7 @@ public class PublishingService {
     @Transactional
     public PublishActionResponse publish(UUID channelId, UUID postId, UUID targetId) {
         PostTarget target = getOwnedTarget(channelId, postId, targetId);
+        ensureNotQueued(postId);
         SocialAccount account = target.getSocialAccount();
         target.setPublishingMode(account.getPostingMode());
         if (account.getPostingMode() == PostingMode.MANUAL) {
@@ -121,6 +127,7 @@ public class PublishingService {
     public TargetResponse markPublished(UUID channelId, UUID postId, UUID targetId,
                                         MarkPublishedRequest request) {
         PostTarget target = getOwnedTarget(channelId, postId, targetId);
+        ensureNotQueued(postId);
         if (target.getStatus() != TargetStatus.PUBLISHED) {
             target.setStatus(TargetStatus.PUBLISHED);
             target.setPublishedAt(Instant.now());
@@ -144,6 +151,7 @@ public class PublishingService {
     @Transactional
     public TargetResponse togglePublished(UUID channelId, UUID postId, TogglePublishedRequest request) {
         Post post = postService.getOwnedPost(channelId, postId);
+        ensureNotQueued(post.getId());
         SocialAccount account = socialAccountService.getOwnedAccount(channelId, request.socialAccountId());
         PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
                 .orElse(null);
@@ -219,6 +227,14 @@ public class PublishingService {
         target.setErrorMessage(null);
         target.setExternalPostId(result.externalPostId());
         target.setExternalUrl(result.externalUrl());
+    }
+
+    /** Posts waiting in the bulk publishing queue are published only by the queue. */
+    private void ensureNotQueued(UUID postId) {
+        if (bulkPublishItemRepository.findFirstByPostIdAndStatus(postId, BulkPublishItemStatus.PENDING).isPresent()) {
+            throw new BusinessException("POST_QUEUED",
+                    "This post is queued for bulk posting. Remove it from the queue to post it individually.");
+        }
     }
 
     private PostTarget getOwnedTarget(UUID channelId, UUID postId, UUID targetId) {

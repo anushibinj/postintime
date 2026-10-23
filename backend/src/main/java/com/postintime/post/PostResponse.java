@@ -15,6 +15,8 @@ public record PostResponse(
         String status,
         PublicationSummaryResponse publicationSummary,
         List<PostTargetSummary> targets,
+        // When the bulk publishing queue will post this; null when it is not queued.
+        Instant bulkPublishScheduledAt,
         Instant createdAt,
         Instant updatedAt
 ) {

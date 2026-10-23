@@ -102,6 +102,7 @@ public class GlobalExceptionHandler {
             case "CHANNEL_DISABLED", "ACCOUNT_DISABLED", "INVALID_TARGET", "CROSS_CHANNEL_TARGET",
                  "INVALID_STATE", "MEDIA_TOO_LARGE", "UNSUPPORTED_MEDIA_TYPE" -> HttpStatus.BAD_REQUEST;
             case "PUBLISH_FAILED", "PROVIDER_ERROR" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case "POST_QUEUED", "ALREADY_QUEUED" -> HttpStatus.CONFLICT;
             case "RATE_LIMITED" -> HttpStatus.TOO_MANY_REQUESTS;
             case "AUTH_EXPIRED" -> HttpStatus.UNAUTHORIZED;
             default -> HttpStatus.BAD_REQUEST;

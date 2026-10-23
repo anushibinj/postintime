@@ -693,6 +693,87 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_STATE"));
     }
 
+    @Test
+    void bulkPublishQueueAppendsBatchesAndLocksQueuedPosts() throws Exception {
+        createWebhookAccount(techChannelId, "Queue hook", "http://127.0.0.1:1/never-called");
+        UUID manualAccountId = createSocialAccount(user1Token, techChannelId, "instagram", "Manual IG");
+        UUID first = createPost(user1Token, techChannelId, "Queue First");
+        UUID second = createPost(user1Token, techChannelId, "Queue Second");
+        UUID third = createPost(user1Token, techChannelId, "Queue Third");
+        String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+
+        java.time.Instant before = java.time.Instant.now();
+        JsonNode batchA = objectMapper.readTree(mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(10, first, second)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        java.time.Instant firstSlot = java.time.Instant.parse(batchA.at("/items/0/scheduledAt").asText());
+        java.time.Instant secondSlot = java.time.Instant.parse(batchA.at("/items/1/scheduledAt").asText());
+        assertThat(firstSlot).isBetween(before.minusSeconds(1), java.time.Instant.now());
+        assertThat(secondSlot).isEqualTo(firstSlot.plus(java.time.Duration.ofMinutes(10)));
+
+        // A second batch joins the end of the queue instead of starting right away.
+        JsonNode batchB = objectMapper.readTree(mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, third)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(java.time.Instant.parse(batchB.at("/items/0/scheduledAt").asText()))
+                .isEqualTo(secondSlot.plus(java.time.Duration.ofMinutes(5)));
+
+        mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, second)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ALREADY_QUEUED"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Queue Second")));
+
+        String secondUrl = "/api/v1/channels/" + techChannelId + "/posts/" + second;
+        MvcResult secondPost = mockMvc.perform(get(secondUrl).header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(java.time.Instant.parse(objectMapper.readTree(secondPost.getResponse().getContentAsString())
+                .get("bulkPublishScheduledAt").asText())).isEqualTo(secondSlot);
+
+        String toggleBody = "{\"socialAccountId\":\"" + manualAccountId + "\"}";
+        mockMvc.perform(post(secondUrl + "/targets/toggle")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toggleBody))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("POST_QUEUED"));
+
+        String jobA = batchA.get("id").asText();
+        String secondItem = batchA.at("/items/1/id").asText();
+        mockMvc.perform(post(base + "/" + jobA + "/items/" + secondItem + "/cancel")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("running"))
+                .andExpect(jsonPath("$.items[1].status").value("cancelled"));
+        mockMvc.perform(get(secondUrl).header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.bulkPublishScheduledAt").doesNotExist());
+        mockMvc.perform(post(secondUrl + "/targets/toggle")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toggleBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("published"));
+
+        mockMvc.perform(get(base).header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(jobA));
+
+        mockMvc.perform(post(base + "/" + jobA + "/cancel").header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.status").value("cancelled"));
+        mockMvc.perform(post(base + "/" + batchB.get("id").asText() + "/cancel")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.status").value("cancelled"));
+    }
+
     private String bulkBody(int intervalMinutes, UUID... postIds) {
         var node = objectMapper.createObjectNode();
         node.put("intervalMinutes", intervalMinutes);
