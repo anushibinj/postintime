@@ -23,6 +23,7 @@ import com.postintime.social.SocialAccount;
 import com.postintime.social.SocialAccountRepository;
 import com.postintime.social.SocialAccountService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -185,9 +186,10 @@ public class PublishingService {
     /**
      * Publishes a post to one webhook account without ownership checks (used by background jobs
      * such as bulk publishing). The outcome is recorded on the post target; publisher failures are
-     * returned, never thrown.
+     * returned, never thrown. Runs in its own transaction so the target's outcome is committed
+     * right away and an unexpected error cannot roll back the caller's transaction.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public PublishResult publishToWebhookAccount(Post post, SocialAccount account) {
         PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
                 .orElseGet(() -> {

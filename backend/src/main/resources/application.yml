@@ -49,6 +49,9 @@ app:
     secret-key: ${STORAGE_SECRET_KEY:minioadmin}
     bucket: ${STORAGE_BUCKET:postintime}
     region: ${STORAGE_REGION:us-east-1}
+  bulk-publish:
+    # How often the backend checks for bulk publish posts that are due (milliseconds).
+    poll-interval-ms: ${BULK_PUBLISH_POLL_INTERVAL_MS:10000}
 
 springdoc:
   api-docs:
