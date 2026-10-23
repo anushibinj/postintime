@@ -12,6 +12,7 @@ const RECENT_LIMIT = 20;
 
 const ITEM_STATUS: Record<BulkPublishItemStatus, { color: string; label: string }> = {
   pending: { color: 'default', label: 'Queued' },
+  publishing: { color: 'processing', label: 'Posting now' },
   published: { color: 'success', label: 'Published' },
   partial: { color: 'warning', label: 'Partly failed' },
   failed: { color: 'error', label: 'Failed' },
@@ -43,11 +44,12 @@ export function BulkPublishJobs({ channelId }: { channelId: string }) {
   }, [progressKey, channelId, queryClient]);
 
   const entries = jobs.flatMap((job) => job.items.map((item) => ({ job, item })));
+  // Waiting posts plus the one being posted right now (its webhooks can take minutes).
   const queue = entries
-    .filter(({ item }) => item.status === 'pending')
+    .filter(({ item }) => item.status === 'pending' || item.status === 'publishing')
     .sort((a, b) => Date.parse(a.item.scheduledAt) - Date.parse(b.item.scheduledAt));
   const recent = entries
-    .filter(({ item }) => item.processedAt)
+    .filter(({ item }) => item.processedAt && item.status !== 'publishing')
     .sort((a, b) => Date.parse(b.item.processedAt!) - Date.parse(a.item.processedAt!))
     .slice(0, RECENT_LIMIT);
 
@@ -106,21 +108,26 @@ export function BulkPublishJobs({ channelId }: { channelId: string }) {
             {queue.map((entry) => (
               <li key={entry.item.id} style={{ marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Typography.Text strong style={{ flexShrink: 0 }}>
-                    {formatQueuedAt(Date.parse(entry.item.scheduledAt), now)}
-                  </Typography.Text>
+                  {entry.item.status === 'publishing' ? (
+                    <Tag color="processing" style={{ marginInlineEnd: 0 }}>Posting now</Tag>
+                  ) : (
+                    <Typography.Text strong style={{ flexShrink: 0 }}>
+                      {formatQueuedAt(Date.parse(entry.item.scheduledAt), now)}
+                    </Typography.Text>
+                  )}
                   <Typography.Text ellipsis style={{ flex: 1, minWidth: 0 }}>
                     {entry.item.postTitle}
                   </Typography.Text>
                   <Typography.Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
                     {entry.job.intervalMinutes} min gap
                   </Typography.Text>
-                  <Tooltip title="Remove from queue">
+                  <Tooltip title={entry.item.status === 'publishing' ? 'Being posted right now' : 'Remove from queue'}>
                     <Button
                       size="small"
                       type="text"
                       aria-label={`Remove ${entry.item.postTitle} from the queue`}
                       icon={<X size={14} />}
+                      disabled={entry.item.status === 'publishing'}
                       loading={cancelItem.isPending && cancelItem.variables?.itemId === entry.item.id}
                       onClick={() => handleRemove(entry)}
                     />

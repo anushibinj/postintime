@@ -45,7 +45,8 @@ export function ChannelDetailPage() {
   const selectablePosts = pagePosts.filter((post) => !post.bulkPublishScheduledAt);
   const selectedOnPage = selectablePosts.filter((post) => selected.has(post.id)).length;
   const queuedCount = bulkJobs.reduce(
-    (count, job) => count + job.items.filter((item) => item.status === 'pending').length,
+    (count, job) =>
+      count + job.items.filter((item) => item.status === 'pending' || item.status === 'publishing').length,
     0,
   );
 

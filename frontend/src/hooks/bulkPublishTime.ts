@@ -27,6 +27,7 @@ export function queueTail(jobs: BulkPublishJob[]): number | null {
   let tail: number | null = null;
   for (const job of jobs) {
     for (const item of job.items) {
+      // A post being published right now counts from when it started (processedAt).
       const at = item.status === 'pending' ? item.scheduledAt : item.processedAt;
       if (at) {
         const ms = Date.parse(at);

@@ -120,7 +120,7 @@ export interface PublishResponse {
 }
 
 export type BulkPublishJobStatus = 'running' | 'completed' | 'cancelled';
-export type BulkPublishItemStatus = 'pending' | 'published' | 'partial' | 'failed' | 'skipped' | 'cancelled';
+export type BulkPublishItemStatus = 'pending' | 'publishing' | 'published' | 'partial' | 'failed' | 'skipped' | 'cancelled';
 
 export interface BulkPublishItem {
   id: string;
