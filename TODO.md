@@ -39,3 +39,7 @@
 - [x] Show a spinner in the frontend when image is getting uploaded
 - [x] For thumbnails that appear in the frontend, show a compressed image in the size required by the small icon (example, 32x32). And create a backend handler that will accept a URL query param like ?size=32 and accordingly return an image. For example, api/v1/media/files/users/89107080-892b-4f8a-9323-a58e7177087a/temporary/7758d5f1-2e05-4aca-87fe-f454cde35b50.png?size=32
 - [x] Update the frontend app title to "Postintme"
+- [x] Multiselect posts inside a channel and bulk post them to social media one after another, with a 5–30 minute interval slider (step 5, default 5). Failures are logged and skipped.
+- [x] Keep bulk posting in a per-channel queue in the DB: new batches line up behind queued posts, queued posts are locked from individual posting and show "Queued for posting at x (in y min)".
+- [x] Wait at least 15 minutes for slow posting webhooks (backend `WEBHOOK_READ_TIMEOUT`, frontend fetch client) without holding DB transactions open.
+- [ ] When deploying to Cloud Run, set the service request timeout to at least 900 seconds so slow posts are not cut off.

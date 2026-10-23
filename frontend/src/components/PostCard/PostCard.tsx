@@ -1,11 +1,13 @@
-import { Empty, Modal, Tooltip, Typography } from 'antd';
-import { Check, ImageOff } from 'lucide-react';
+import { Checkbox, Empty, Modal, Tag, Tooltip, Typography } from 'antd';
+import { Check, Clock, ImageOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Platform, Post, SocialAccount } from '../../types';
 import { useSocialAccounts } from '../../hooks/useSocialAccounts';
 import { togglePublished } from '../../api/publishing';
 import { mediaUrlWithSize } from '../../api/media';
+import { useNow } from '../../hooks/useNow';
+import { formatQueuedAt } from '../../hooks/bulkPublishTime';
 
 const THUMB_SIZE = 64;
 const ICON_SIZE = 36;
@@ -20,7 +22,18 @@ const PLATFORM_COLORS: Record<Platform, string> = {
   threads: '#111111',
 };
 
-export function PostCard({ post, channelId, accounts }: { post: Post; channelId: string; accounts: SocialAccount[] }) {
+interface PostCardProps {
+  post: Post;
+  channelId: string;
+  accounts: SocialAccount[];
+  /** When provided, the row shows a checkbox for bulk actions. */
+  onSelectChange?: (checked: boolean) => void;
+  selected?: boolean;
+  /** Current time in ms, for the "in 12 min" label of queued posts. */
+  now: number;
+}
+
+export function PostCard({ post, channelId, accounts, onSelectChange, selected = false, now }: PostCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const targets = post.targets || [];
@@ -46,60 +59,94 @@ export function PostCard({ post, channelId, accounts }: { post: Post; channelId:
   });
 
   const href = `/channels/${channelId}/posts/${post.id}`;
+  // Queued posts are published by the bulk posting queue only.
+  const queuedAt = post.bulkPublishScheduledAt ? Date.parse(post.bulkPublishScheduledAt) : null;
+  const queued = queuedAt !== null;
 
   return (
-    <a
-      href={href}
-      onClick={(event) => {
-        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-          return;
-        }
-        event.preventDefault();
-        navigate(href);
-      }}
+    <div
       style={{
         display: 'flex',
-        gap: 12,
-        padding: 12,
-        marginBottom: 8,
-        border: '1px solid #e8e8e8',
-        borderRadius: 8,
-        background: '#fff',
-        cursor: 'pointer',
         alignItems: 'center',
-        color: 'inherit',
-        textDecoration: 'none',
+        marginBottom: 8,
+        border: `1px solid ${selected ? '#1677ff' : '#e8e8e8'}`,
+        borderRadius: 8,
+        background: selected ? '#f0f7ff' : '#fff',
       }}
     >
-      <PostThumb url={post.media?.url} title={post.title} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Typography.Title level={5} style={{ margin: 0 }} ellipsis>
-          {post.title}
-        </Typography.Title>
-        {post.caption && (
-          <Typography.Paragraph type="secondary" ellipsis={{ rows: 1 }} style={{ margin: '4px 0 0' }}>
-            {post.caption}
-          </Typography.Paragraph>
-        )}
-      </div>
-      {enabledAccounts.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
-          {enabledAccounts.map((account) => {
-            const target = targets.find((item) => item.socialAccountId === account.id);
-            const posted = target?.status === 'published';
-            return (
-              <AccountToggle
-                key={account.id}
-                account={account}
-                posted={posted}
-                disabled={toggle.isPending}
-                onToggle={() => toggle.mutate(account.id)}
-              />
-            );
-          })}
-        </div>
+      {onSelectChange && (
+        // Kept outside the link so toggling the checkbox never navigates.
+        <Tooltip title={queued ? 'Already queued for bulk posting' : undefined}>
+          <Checkbox
+            aria-label={`Select ${post.title}`}
+            checked={selected && !queued}
+            disabled={queued}
+            onChange={(event) => onSelectChange(event.target.checked)}
+            style={{ paddingLeft: 12 }}
+          />
+        </Tooltip>
       )}
-    </a>
+      <a
+        href={href}
+        onClick={(event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+          }
+          event.preventDefault();
+          navigate(href);
+        }}
+        style={{
+          display: 'flex',
+          flex: 1,
+          minWidth: 0,
+          gap: 12,
+          padding: 12,
+          cursor: 'pointer',
+          alignItems: 'center',
+          color: 'inherit',
+          textDecoration: 'none',
+        }}
+      >
+        <PostThumb url={post.media?.url} title={post.title} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Typography.Title level={5} style={{ margin: 0 }} ellipsis>
+            {post.title}
+          </Typography.Title>
+          {post.caption && (
+            <Typography.Paragraph type="secondary" ellipsis={{ rows: 1 }} style={{ margin: '4px 0 0' }}>
+              {post.caption}
+            </Typography.Paragraph>
+          )}
+          {queuedAt !== null && (
+            <Tag
+              color="processing"
+              icon={<Clock size={12} />}
+              style={{ marginTop: 6, display: 'inline-flex', gap: 4, alignItems: 'center' }}
+            >
+              Queued for posting at {formatQueuedAt(queuedAt, now)}
+            </Tag>
+          )}
+        </div>
+        {enabledAccounts.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+            {enabledAccounts.map((account) => {
+              const target = targets.find((item) => item.socialAccountId === account.id);
+              const posted = target?.status === 'published';
+              return (
+                <AccountToggle
+                  key={account.id}
+                  account={account}
+                  posted={posted}
+                  disabled={toggle.isPending}
+                  locked={queued}
+                  onToggle={() => toggle.mutate(account.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+      </a>
+    </div>
   );
 }
 
@@ -107,11 +154,14 @@ function AccountToggle({
   account,
   posted,
   disabled,
+  locked,
   onToggle,
 }: {
   account: SocialAccount;
   posted: boolean;
   disabled: boolean;
+  /** The post is in the bulk posting queue and cannot be posted individually. */
+  locked: boolean;
   onToggle: () => void;
 }) {
   const color = PLATFORM_COLORS[account.platform];
@@ -122,12 +172,16 @@ function AccountToggle({
       ? `Send webhook for ${account.name}`
       : `Mark ${account.name} as posted`;
   return (
-    <Tooltip title={`${account.name} · ${webhook ? 'Webhook' : 'Manual'} · ${posted ? 'Posted' : 'Not posted'}`}>
+    <Tooltip
+      title={`${account.name} · ${webhook ? 'Webhook' : 'Manual'} · ${posted ? 'Posted' : 'Not posted'}${
+        locked ? ' · Queued for bulk posting' : ''
+      }`}
+    >
       <button
         type="button"
         aria-label={actionLabel}
         aria-pressed={posted}
-        disabled={disabled}
+        disabled={disabled || locked}
         className="post-account-toggle"
         onClick={(event) => {
           event.preventDefault();
@@ -145,7 +199,8 @@ function AccountToggle({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: disabled ? 'wait' : 'pointer',
+          cursor: locked ? 'not-allowed' : disabled ? 'wait' : 'pointer',
+          opacity: locked ? 0.5 : 1,
           padding: 0,
           transition: 'box-shadow 0.15s ease, transform 0.15s ease',
         }}
@@ -226,8 +281,16 @@ function PostThumb({ url, title }: { url?: string; title: string }) {
   );
 }
 
-export function PostList({ posts, channelId }: { posts: Post[]; channelId: string }) {
+interface PostListProps {
+  posts: Post[];
+  channelId: string;
+  selectedIds?: ReadonlySet<string>;
+  onSelectChange?: (post: Post, checked: boolean) => void;
+}
+
+export function PostList({ posts, channelId, selectedIds, onSelectChange }: PostListProps) {
   const { data: accounts = [] } = useSocialAccounts(channelId);
+  const now = useNow();
 
   if (posts.length === 0) {
     return <Empty description="No posts yet" />;
@@ -235,7 +298,15 @@ export function PostList({ posts, channelId }: { posts: Post[]; channelId: strin
   return (
     <div>
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} channelId={channelId} accounts={accounts} />
+        <PostCard
+          key={post.id}
+          post={post}
+          channelId={channelId}
+          accounts={accounts}
+          now={now}
+          selected={selectedIds?.has(post.id) ?? false}
+          onSelectChange={onSelectChange ? (checked) => onSelectChange(post, checked) : undefined}
+        />
       ))}
     </div>
   );

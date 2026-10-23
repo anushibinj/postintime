@@ -13,9 +13,11 @@ interface PublishTargetProps {
   post: Post;
   channelId: string;
   postId: string;
+  /** The post is in the bulk posting queue, so it cannot be published individually. */
+  locked?: boolean;
 }
 
-export function PublishTargetPanel({ target, post, channelId, postId }: PublishTargetProps) {
+export function PublishTargetPanel({ target, post, channelId, postId, locked = false }: PublishTargetProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const { publish, markPublished } = usePublishingMutations(channelId, postId);
 
@@ -67,7 +69,7 @@ export function PublishTargetPanel({ target, post, channelId, postId }: PublishT
       size="small"
       style={{ marginBottom: 12 }}
       actions={
-        target.status === 'pending'
+        target.status === 'pending' && !locked
           ? [
               <Tooltip title="Publish" key="publish">
                 <span onClick={handlePublish}><Send size={16} /></span>

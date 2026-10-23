@@ -2,6 +2,7 @@ package com.postintime;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.postintime.publishing.bulk.BulkPublishProcessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,6 +38,12 @@ class PostInTimeIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private BulkPublishProcessor bulkPublishProcessor;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private String user1Token;
     private String user2Token;
@@ -535,6 +543,368 @@ class PostInTimeIntegrationTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    void bulkPublishValidatesRequest() throws Exception {
+        UUID postId = createPost(user1Token, techChannelId, "Bulk Validation");
+        String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+
+        mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, postId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("NO_WEBHOOK_ACCOUNTS"));
+
+        createWebhookAccount(techChannelId, "Bulk hook", "http://127.0.0.1:1/never-called");
+        for (int interval : new int[]{0, 7, 35}) {
+            mockMvc.perform(post(base)
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(interval, postId)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        }
+
+        UUID gamingPostId = createPost(user1Token, gamingChannelId, "Other channel");
+        mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, postId, gamingPostId)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user2Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, postId)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void bulkPublishPostsOneAtATimeAndMovesOnAfterFailures() throws Exception {
+        java.util.List<String> received = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+        java.util.concurrent.atomic.AtomicInteger inFlight = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger maxInFlight = new java.util.concurrent.atomic.AtomicInteger();
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(4));
+        server.createContext("/", exchange -> {
+            maxInFlight.accumulateAndGet(inFlight.incrementAndGet(), Math::max);
+            String body = new String(exchange.getRequestBody().readAllBytes());
+            String path = exchange.getRequestURI().getPath();
+            received.add(path + " " + (body.contains("Bulk First") ? "first" : "second"));
+            int code = path.equals("/fail") ? 500 : 200;
+            exchange.sendResponseHeaders(code, -1);
+            exchange.close();
+            inFlight.decrementAndGet();
+        });
+        server.start();
+        // processNextDueItem works across channels; park anything other tests left queued.
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'CANCELLED' WHERE status = 'PENDING'");
+        try {
+            String root = "http://127.0.0.1:" + server.getAddress().getPort();
+            createWebhookAccount(techChannelId, "A failing hook", root + "/fail");
+            UUID okAccountId = createWebhookAccount(techChannelId, "B working hook", root + "/ok");
+            UUID first = createPost(user1Token, techChannelId, "Bulk First");
+            UUID second = createPost(user1Token, techChannelId, "Bulk Second");
+
+            MvcResult created = mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/bulk-publish-jobs")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(10, first, second, first)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.status").value("running"))
+                    .andExpect(jsonPath("$.intervalMinutes").value(10))
+                    .andExpect(jsonPath("$.totalItems").value(2))
+                    .andExpect(jsonPath("$.items[0].postTitle").value("Bulk First"))
+                    .andExpect(jsonPath("$.items[1].postTitle").value("Bulk Second"))
+                    .andReturn();
+            UUID jobId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                    .get("id").asText());
+            String jobUrl = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs/" + jobId;
+
+            assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
+            // The second post waits for the interval.
+            assertThat(bulkPublishProcessor.processNextDueItem()).isFalse();
+            assertThat(received).containsExactly("/fail first", "/ok first");
+
+            mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("running"))
+                    .andExpect(jsonPath("$.processedItems").value(1))
+                    .andExpect(jsonPath("$.failedItems").value(1))
+                    .andExpect(jsonPath("$.items[0].status").value("partial"))
+                    .andExpect(jsonPath("$.items[0].errorMessage")
+                            .value(org.hamcrest.Matchers.containsString("A failing hook")))
+                    .andExpect(jsonPath("$.items[1].status").value("pending"));
+
+            jdbcTemplate.update("UPDATE bulk_publish_items SET scheduled_at = now() WHERE job_id = ? AND status = 'PENDING'",
+                    jobId);
+            assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
+            assertThat(received).containsExactly("/fail first", "/ok first", "/fail second", "/ok second");
+            assertThat(maxInFlight.get()).isEqualTo(1);
+
+            mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.status").value("completed"))
+                    .andExpect(jsonPath("$.nextRunAt").doesNotExist())
+                    .andExpect(jsonPath("$.processedItems").value(2));
+
+            mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + second + "/targets")
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[?(@.socialAccount.id == '" + okAccountId + "')].status")
+                            .value(org.hamcrest.Matchers.contains("published")))
+                    .andExpect(jsonPath("$[?(@.socialAccount.name == 'A failing hook')].status")
+                            .value(org.hamcrest.Matchers.contains("failed")));
+
+            mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/bulk-publish-jobs")
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].id").value(jobId.toString()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void bulkPublishJobCanBeCancelled() throws Exception {
+        createWebhookAccount(techChannelId, "Cancel hook", "http://127.0.0.1:1/never-called");
+        UUID postId = createPost(user1Token, techChannelId, "Cancel Me");
+        MvcResult created = mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/bulk-publish-jobs")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"postIds\":[\"" + postId + "\"]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.intervalMinutes").value(5))
+                .andReturn();
+        UUID jobId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("id").asText());
+        String cancelUrl = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs/" + jobId + "/cancel";
+
+        mockMvc.perform(post(cancelUrl).header("Authorization", "Bearer " + user2Token))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post(cancelUrl).header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("cancelled"))
+                .andExpect(jsonPath("$.items[0].status").value("cancelled"));
+        mockMvc.perform(post(cancelUrl).header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_STATE"));
+    }
+
+    @Test
+    void bulkPublishQueueAppendsBatchesAndLocksQueuedPosts() throws Exception {
+        createWebhookAccount(techChannelId, "Queue hook", "http://127.0.0.1:1/never-called");
+        UUID manualAccountId = createSocialAccount(user1Token, techChannelId, "instagram", "Manual IG");
+        UUID first = createPost(user1Token, techChannelId, "Queue First");
+        UUID second = createPost(user1Token, techChannelId, "Queue Second");
+        UUID third = createPost(user1Token, techChannelId, "Queue Third");
+        String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+
+        java.time.Instant before = java.time.Instant.now();
+        JsonNode batchA = objectMapper.readTree(mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(10, first, second)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        java.time.Instant firstSlot = java.time.Instant.parse(batchA.at("/items/0/scheduledAt").asText());
+        java.time.Instant secondSlot = java.time.Instant.parse(batchA.at("/items/1/scheduledAt").asText());
+        assertThat(firstSlot).isBetween(before.minusSeconds(1), java.time.Instant.now());
+        assertThat(secondSlot).isEqualTo(firstSlot.plus(java.time.Duration.ofMinutes(10)));
+
+        // A second batch joins the end of the queue instead of starting right away.
+        JsonNode batchB = objectMapper.readTree(mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, third)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        assertThat(java.time.Instant.parse(batchB.at("/items/0/scheduledAt").asText()))
+                .isEqualTo(secondSlot.plus(java.time.Duration.ofMinutes(5)));
+
+        mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, second)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ALREADY_QUEUED"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Queue Second")));
+
+        String secondUrl = "/api/v1/channels/" + techChannelId + "/posts/" + second;
+        MvcResult secondPost = mockMvc.perform(get(secondUrl).header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(java.time.Instant.parse(objectMapper.readTree(secondPost.getResponse().getContentAsString())
+                .get("bulkPublishScheduledAt").asText())).isEqualTo(secondSlot);
+
+        String toggleBody = "{\"socialAccountId\":\"" + manualAccountId + "\"}";
+        mockMvc.perform(post(secondUrl + "/targets/toggle")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toggleBody))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("POST_QUEUED"));
+
+        String jobA = batchA.get("id").asText();
+        String secondItem = batchA.at("/items/1/id").asText();
+        mockMvc.perform(post(base + "/" + jobA + "/items/" + secondItem + "/cancel")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("running"))
+                .andExpect(jsonPath("$.items[1].status").value("cancelled"));
+        mockMvc.perform(get(secondUrl).header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.bulkPublishScheduledAt").doesNotExist());
+        mockMvc.perform(post(secondUrl + "/targets/toggle")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toggleBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("published"));
+
+        mockMvc.perform(get(base).header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(jobA));
+
+        mockMvc.perform(post(base + "/" + jobA + "/cancel").header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.status").value("cancelled"));
+        mockMvc.perform(post(base + "/" + batchB.get("id").asText() + "/cancel")
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.status").value("cancelled"));
+    }
+
+    @Test
+    void bulkPublishHoldsNoLocksWhileAWebhookIsSlow() throws Exception {
+        java.util.concurrent.CountDownLatch received = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/slow", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            received.countDown();
+            try {
+                release.await(30, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'CANCELLED' WHERE status = 'PENDING'");
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            UUID manualAccountId = createSocialAccount(user1Token, techChannelId, "instagram", "Manual IG");
+            createWebhookAccount(techChannelId, "Slow hook",
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/slow");
+            UUID first = createPost(user1Token, techChannelId, "Slow First");
+            UUID second = createPost(user1Token, techChannelId, "Slow Second");
+            String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+            JsonNode job = objectMapper.readTree(mockMvc.perform(post(base)
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(5, first, second)))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString());
+            String jobUrl = base + "/" + job.get("id").asText();
+
+            var processing = executor.submit(() -> bulkPublishProcessor.processNextDueItem());
+            assertThat(received.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+
+            // The webhook is hanging; the queue must stay usable.
+            var cancelSecond = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                try {
+                    return mockMvc.perform(post(jobUrl + "/items/" + job.at("/items/1/id").asText() + "/cancel")
+                                    .header("Authorization", "Bearer " + user1Token))
+                            .andReturn().getResponse().getStatus();
+                } catch (Exception ex) {
+                    throw new IllegalStateException(ex);
+                }
+            });
+            assertThat(cancelSecond.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(200);
+
+            mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.items[0].status").value("publishing"))
+                    .andExpect(jsonPath("$.items[1].status").value("cancelled"));
+            mockMvc.perform(post(jobUrl + "/items/" + job.at("/items/0/id").asText() + "/cancel")
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("This post is being posted right now."));
+            mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + first)
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.bulkPublishScheduledAt").exists());
+            mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + first + "/targets/toggle")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"socialAccountId\":\"" + manualAccountId + "\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("POST_QUEUED"));
+            mockMvc.perform(post(base)
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(5, first)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("ALREADY_QUEUED"));
+
+            release.countDown();
+            assertThat(processing.get(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.status").value("completed"))
+                    .andExpect(jsonPath("$.items[0].status").value("published"));
+            mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + first)
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.bulkPublishScheduledAt").doesNotExist());
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void bulkPublishFailsPostsLeftStalledByACrash() throws Exception {
+        createWebhookAccount(techChannelId, "Crash hook", "http://127.0.0.1:1/never-called");
+        UUID postId = createPost(user1Token, techChannelId, "Crashed Mid Post");
+        String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+        JsonNode job = objectMapper.readTree(mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, postId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        // Simulate a backend that claimed the post and died 30 minutes ago.
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'PUBLISHING', processed_at = now() - interval '30 minutes', "
+                + "updated_at = now() - interval '30 minutes' WHERE job_id = ?", UUID.fromString(job.get("id").asText()));
+
+        bulkPublishProcessor.failStalledItems();
+
+        mockMvc.perform(get(base + "/" + job.get("id").asText()).header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.status").value("completed"))
+                .andExpect(jsonPath("$.items[0].status").value("failed"))
+                .andExpect(jsonPath("$.items[0].errorMessage")
+                        .value(org.hamcrest.Matchers.startsWith("Interrupted")));
+    }
+
+    private String bulkBody(int intervalMinutes, UUID... postIds) {
+        var node = objectMapper.createObjectNode();
+        node.put("intervalMinutes", intervalMinutes);
+        var array = node.putArray("postIds");
+        for (UUID id : postIds) {
+            array.add(id.toString());
+        }
+        return node.toString();
+    }
+
+    private UUID createWebhookAccount(UUID channelId, String name, String webhookUrl) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/channels/" + channelId + "/social-accounts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"platform\":\"linkedin\",\"name\":\"" + name + "\",\"postingMode\":\"webhook\","
+                                + "\"webhookUrl\":\"" + webhookUrl + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return UUID.fromString(objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText());
     }
 
     private String targetsBody(UUID... accountIds) throws Exception {

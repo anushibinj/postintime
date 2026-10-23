@@ -1,6 +1,11 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const TOKEN_KEY = 'postintime_token';
+/**
+ * How long to wait for the API before giving up. Publishing calls wait for the social media
+ * webhook, which can take many minutes, so this matches the backend's 15 minute webhook timeout.
+ */
+export const REQUEST_TIMEOUT_MS = 15 * 60 * 1000;
 const sessionExpiredListeners = new Set<() => void>();
 
 export function getToken(): string | null {
@@ -66,7 +71,33 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+  const callerSignal = options.signal;
+  const abortFromCaller = () => controller.abort(callerSignal?.reason);
+  if (callerSignal?.aborted) {
+    abortFromCaller();
+  }
+  callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
+  try {
+    return await sendRequest<T>(path, { ...options, headers, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) {
+      throw new Error('The server did not respond within 15 minutes. Please try again.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    callerSignal?.removeEventListener('abort', abortFromCaller);
+  }
+}
+
+async function sendRequest<T>(path: string, init: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText })) as {
       message?: string;

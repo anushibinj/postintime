@@ -1,4 +1,4 @@
-import { Button, Card, Checkbox, Col, Modal, Row, Segmented, Space, Typography, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Col, Modal, Row, Segmented, Space, Typography, message } from 'antd';
 import { ArrowLeft, Edit, ImageOff, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { lazy, Suspense, useState } from 'react';
@@ -6,6 +6,8 @@ import { usePost, useDeletePost } from '../../hooks/usePosts';
 import { useTargets, usePublishingMutations } from '../../hooks/usePublishTarget';
 import { useSocialAccounts } from '../../hooks/useSocialAccounts';
 import { PageLoader } from '../../components/PageLoader/PageLoader';
+import { useNow } from '../../hooks/useNow';
+import { formatQueuedAt } from '../../hooks/bulkPublishTime';
 
 const PublishTargetPanel = lazy(() => import('../../components/PublishTarget/PublishTarget'));
 
@@ -19,8 +21,11 @@ export function PostDetailPage() {
   const { createTargets } = usePublishingMutations(channelId!, postId!);
   const [targetModalOpen, setTargetModalOpen] = useState(false);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+  const now = useNow();
 
   if (!post) return null;
+
+  const queuedAt = post.bulkPublishScheduledAt ? Date.parse(post.bulkPublishScheduledAt) : null;
 
   const summary = post.publicationSummary;
   const enabledAccounts = accounts.filter((a) => a.enabled);
@@ -158,6 +163,15 @@ export function PostDetailPage() {
           )
         }
       >
+        {queuedAt !== null && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            title={`Queued for bulk posting at ${formatQueuedAt(queuedAt, now)}`}
+            description="The bulk posting queue will publish this post. Remove it from the queue on the channel page to post it individually."
+          />
+        )}
         {summary && summary.total > 0 && (
           <Typography.Paragraph type="secondary">
             {summary.published} / {summary.total} published
@@ -174,6 +188,7 @@ export function PostDetailPage() {
                 post={post}
                 channelId={channelId!}
                 postId={postId!}
+                locked={queuedAt !== null}
               />
             ))}
           </Suspense>

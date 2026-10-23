@@ -60,6 +60,8 @@ export interface Post {
   status: PostStatus;
   publicationSummary?: PublicationSummary;
   targets?: PostTargetSummary[];
+  /** When the channel's bulk posting queue will post this; absent when not queued. */
+  bulkPublishScheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,4 +117,32 @@ export interface PublishResponse {
   status: TargetStatus;
   publishingMode: PostingMode;
   instructions: PublishInstructions;
+}
+
+export type BulkPublishJobStatus = 'running' | 'completed' | 'cancelled';
+export type BulkPublishItemStatus = 'pending' | 'publishing' | 'published' | 'partial' | 'failed' | 'skipped' | 'cancelled';
+
+export interface BulkPublishItem {
+  id: string;
+  postId: string;
+  postTitle: string;
+  position: number;
+  status: BulkPublishItemStatus;
+  scheduledAt: string;
+  errorMessage?: string | null;
+  processedAt?: string | null;
+}
+
+export interface BulkPublishJob {
+  id: string;
+  channelId: string;
+  intervalMinutes: number;
+  status: BulkPublishJobStatus;
+  nextRunAt?: string | null;
+  totalItems: number;
+  processedItems: number;
+  failedItems: number;
+  items: BulkPublishItem[];
+  createdAt: string;
+  updatedAt: string;
 }

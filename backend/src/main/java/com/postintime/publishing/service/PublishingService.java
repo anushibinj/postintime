@@ -11,6 +11,8 @@ import com.postintime.publishing.api.PublishInstructionsResponse;
 import com.postintime.publishing.api.SocialAccountSummary;
 import com.postintime.publishing.api.TargetResponse;
 import com.postintime.publishing.api.TogglePublishedRequest;
+import com.postintime.publishing.bulk.BulkPublishItemRepository;
+import com.postintime.publishing.bulk.BulkPublishService;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.PublishContext;
@@ -38,17 +40,20 @@ public class PublishingService {
     private final SocialAccountService socialAccountService;
     private final SocialAccountRepository socialAccountRepository;
     private final PublisherFactory publisherFactory;
+    private final BulkPublishItemRepository bulkPublishItemRepository;
 
     public PublishingService(PostTargetRepository postTargetRepository,
                              PostService postService,
                              SocialAccountService socialAccountService,
                              SocialAccountRepository socialAccountRepository,
-                             PublisherFactory publisherFactory) {
+                             PublisherFactory publisherFactory,
+                             BulkPublishItemRepository bulkPublishItemRepository) {
         this.postTargetRepository = postTargetRepository;
         this.postService = postService;
         this.socialAccountService = socialAccountService;
         this.socialAccountRepository = socialAccountRepository;
         this.publisherFactory = publisherFactory;
+        this.bulkPublishItemRepository = bulkPublishItemRepository;
     }
 
     @Transactional(readOnly = true)
@@ -87,9 +92,11 @@ public class PublishingService {
         return results;
     }
 
-    @Transactional
+    // Not @Transactional: a webhook can take up to app.webhook.read-timeout (15 minutes), and no DB
+    // connection or row lock should be held while waiting. Each repository call commits on its own.
     public PublishActionResponse publish(UUID channelId, UUID postId, UUID targetId) {
         PostTarget target = getOwnedTarget(channelId, postId, targetId);
+        ensureNotQueued(postId);
         SocialAccount account = target.getSocialAccount();
         target.setPublishingMode(account.getPostingMode());
         if (account.getPostingMode() == PostingMode.MANUAL) {
@@ -120,6 +127,7 @@ public class PublishingService {
     public TargetResponse markPublished(UUID channelId, UUID postId, UUID targetId,
                                         MarkPublishedRequest request) {
         PostTarget target = getOwnedTarget(channelId, postId, targetId);
+        ensureNotQueued(postId);
         if (target.getStatus() != TargetStatus.PUBLISHED) {
             target.setStatus(TargetStatus.PUBLISHED);
             target.setPublishedAt(Instant.now());
@@ -140,9 +148,10 @@ public class PublishingService {
         return toResponse(postTargetRepository.save(target));
     }
 
-    @Transactional
+    // Not @Transactional for the same reason as publish(): the webhook call can be slow.
     public TargetResponse togglePublished(UUID channelId, UUID postId, TogglePublishedRequest request) {
         Post post = postService.getOwnedPost(channelId, postId);
+        ensureNotQueued(post.getId());
         SocialAccount account = socialAccountService.getOwnedAccount(channelId, request.socialAccountId());
         PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
                 .orElse(null);
@@ -178,13 +187,53 @@ public class PublishingService {
                     result.errorMessage() != null ? result.errorMessage() : "Webhook publish failed."
             );
         }
+        applySuccess(target, result);
+        postTargetRepository.save(target);
+    }
+
+    /**
+     * Publishes a post to one webhook account without ownership checks (used by background jobs
+     * such as bulk publishing). The outcome is recorded on the post target; publisher failures are
+     * returned, never thrown. Deliberately runs outside any transaction: the webhook can take up to
+     * app.webhook.read-timeout, and the target's outcome is saved (and committed) once it answers.
+     */
+    public PublishResult publishToWebhookAccount(Post post, SocialAccount account) {
+        PostTarget target = postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
+                .orElseGet(() -> {
+                    PostTarget created = new PostTarget();
+                    created.setPost(post);
+                    created.setSocialAccount(account);
+                    return created;
+                });
+        target.setPublishingMode(PostingMode.WEBHOOK);
+        SocialMediaPublisher publisher = publisherFactory.getPublisher(PostingMode.WEBHOOK);
+        PublishResult result = publisher.publish(new PublishContext(post, account, target));
+        if (result.success()) {
+            applySuccess(target, result);
+        } else {
+            target.setStatus(TargetStatus.FAILED);
+            target.setErrorCode(result.errorCode());
+            target.setErrorMessage(result.errorMessage());
+        }
+        postTargetRepository.save(target);
+        return result;
+    }
+
+    private void applySuccess(PostTarget target, PublishResult result) {
         target.setStatus(TargetStatus.PUBLISHED);
         target.setPublishedAt(Instant.now());
         target.setErrorCode(null);
         target.setErrorMessage(null);
         target.setExternalPostId(result.externalPostId());
         target.setExternalUrl(result.externalUrl());
-        postTargetRepository.save(target);
+    }
+
+    /** Posts waiting in the bulk publishing queue are published only by the queue. */
+    private void ensureNotQueued(UUID postId) {
+        if (bulkPublishItemRepository.findFirstByPostIdAndStatusIn(postId, BulkPublishService.OPEN_STATUSES).isPresent()) {
+            throw new BusinessException("POST_QUEUED",
+                    "This post is queued for bulk posting. Remove it from the queue to post it individually.");
+        }
     }
 
     private PostTarget getOwnedTarget(UUID channelId, UUID postId, UUID targetId) {

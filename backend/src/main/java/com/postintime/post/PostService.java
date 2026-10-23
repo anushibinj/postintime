@@ -7,6 +7,9 @@ import com.postintime.common.error.BusinessException;
 import com.postintime.common.error.ResourceNotFoundException;
 import com.postintime.media.MediaResponse;
 import com.postintime.media.MediaService;
+import com.postintime.publishing.bulk.BulkPublishItem;
+import com.postintime.publishing.bulk.BulkPublishItemRepository;
+import com.postintime.publishing.bulk.BulkPublishService;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.TargetStatus;
@@ -27,15 +30,18 @@ public class PostService {
     private final ChannelService channelService;
     private final MediaService mediaService;
     private final PostTargetRepository postTargetRepository;
+    private final BulkPublishItemRepository bulkPublishItemRepository;
 
     public PostService(PostRepository postRepository,
                        ChannelService channelService,
                        MediaService mediaService,
-                       PostTargetRepository postTargetRepository) {
+                       PostTargetRepository postTargetRepository,
+                       BulkPublishItemRepository bulkPublishItemRepository) {
         this.postRepository = postRepository;
         this.channelService = channelService;
         this.mediaService = mediaService;
         this.postTargetRepository = postTargetRepository;
+        this.bulkPublishItemRepository = bulkPublishItemRepository;
     }
 
     static final int MAX_PAGE_SIZE = 100;
@@ -164,6 +170,9 @@ public class PostService {
                 post.getStatus().name().toLowerCase(),
                 new PublicationSummaryResponse(total, published, pending, failed),
                 targetSummaries,
+                bulkPublishItemRepository.findFirstByPostIdAndStatusIn(post.getId(), BulkPublishService.OPEN_STATUSES)
+                        .map(BulkPublishItem::getScheduledAt)
+                        .orElse(null),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
