@@ -5,7 +5,8 @@ import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { fetchChannel } from '../../api/channels';
 import { usePosts } from '../../hooks/usePosts';
 import { useSocialAccounts } from '../../hooks/useSocialAccounts';
-import { useBulkPublishMutations } from '../../hooks/useBulkPublish';
+import { useBulkPublishJobs, useBulkPublishMutations } from '../../hooks/useBulkPublish';
+import { queueTail } from '../../hooks/bulkPublishTime';
 import { parsePageParam, parseSizeParam } from '../../hooks/postListParams';
 import { PageLoader } from '../../components/PageLoader/PageLoader';
 import { ArrowLeft, Plus, Send } from 'lucide-react';
@@ -33,13 +34,20 @@ export function ChannelDetailPage() {
   const { data: postsData, isLoading } = usePosts(channelId, { page, size, sort: 'updatedAt,desc' });
   const { data: accounts = [] } = useSocialAccounts(channelId);
   const { create: createBulkJob } = useBulkPublishMutations(channelId!);
+  const { data: bulkJobs = [] } = useBulkPublishJobs(channelId);
   const [selection, setSelection] = useState<Selection>({ posts: new Map() });
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
   // Selection survives paging but not switching channels.
   const selected = selection.channelId === channelId ? selection.posts : new Map<string, string>();
   const pagePosts = postsData?.items || [];
-  const selectedOnPage = pagePosts.filter((post) => selected.has(post.id)).length;
+  // Posts already in the bulk posting queue cannot be queued again.
+  const selectablePosts = pagePosts.filter((post) => !post.bulkPublishScheduledAt);
+  const selectedOnPage = selectablePosts.filter((post) => selected.has(post.id)).length;
+  const queuedCount = bulkJobs.reduce(
+    (count, job) => count + job.items.filter((item) => item.status === 'pending').length,
+    0,
+  );
 
   const updateSelection = (update: (posts: Map<string, string>) => void) => {
     const next = new Map(selected);
@@ -59,14 +67,14 @@ export function ChannelDetailPage() {
 
   const handleSelectPage = (checked: boolean) => {
     updateSelection((posts) => {
-      pagePosts.forEach((post) => (checked ? posts.set(post.id, post.title) : posts.delete(post.id)));
+      selectablePosts.forEach((post) => (checked ? posts.set(post.id, post.title) : posts.delete(post.id)));
     });
   };
 
   const handleStartBulk = async (intervalMinutes: number) => {
     try {
       await createBulkJob.mutateAsync({ postIds: [...selected.keys()], intervalMinutes });
-      message.success(`Bulk posting started for ${selected.size} ${selected.size === 1 ? 'post' : 'posts'}`);
+      message.success(`Added ${selected.size} ${selected.size === 1 ? 'post' : 'posts'} to the bulk posting queue`);
       setBulkModalOpen(false);
       setSelection({ channelId, posts: new Map() });
     } catch (error) {
@@ -110,8 +118,9 @@ export function ChannelDetailPage() {
           pagePosts.length > 0 && (
             <Space size={8} wrap>
               <Checkbox
-                checked={selectedOnPage === pagePosts.length}
-                indeterminate={selectedOnPage > 0 && selectedOnPage < pagePosts.length}
+                checked={selectablePosts.length > 0 && selectedOnPage === selectablePosts.length}
+                indeterminate={selectedOnPage > 0 && selectedOnPage < selectablePosts.length}
+                disabled={selectablePosts.length === 0}
                 onChange={(event) => handleSelectPage(event.target.checked)}
               >
                 Select page
@@ -157,6 +166,8 @@ export function ChannelDetailPage() {
             open={bulkModalOpen}
             posts={[...selected].map(([id, title]) => ({ id, title }))}
             accounts={accounts}
+            queueTail={queueTail(bulkJobs)}
+            queuedCount={queuedCount}
             submitting={createBulkJob.isPending}
             onCancel={() => setBulkModalOpen(false)}
             onSubmit={handleStartBulk}

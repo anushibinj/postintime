@@ -8,8 +8,9 @@ import {
   BULK_INTERVAL_STEP,
   intervalMarks,
   normalizeInterval,
-  totalDurationMinutes,
 } from '../../hooks/bulkPublishInterval';
+import { firstSlot, formatQueuedAt } from '../../hooks/bulkPublishTime';
+import { useNow } from '../../hooks/useNow';
 
 export interface BulkPublishSelection {
   id: string;
@@ -20,17 +21,33 @@ interface BulkPublishModalProps {
   open: boolean;
   posts: BulkPublishSelection[];
   accounts: SocialAccount[];
+  /** Latest queued slot (or latest bulk post) in this channel; new posts are queued after it. */
+  queueTail: number | null;
+  /** Posts already waiting in the channel's queue. */
+  queuedCount: number;
   submitting: boolean;
   onCancel: () => void;
   onSubmit: (intervalMinutes: number) => void;
 }
 
-export function BulkPublishModal({ open, posts, accounts, submitting, onCancel, onSubmit }: BulkPublishModalProps) {
+export function BulkPublishModal({
+  open,
+  posts,
+  accounts,
+  queueTail,
+  queuedCount,
+  submitting,
+  onCancel,
+  onSubmit,
+}: BulkPublishModalProps) {
   const [interval, setIntervalMinutes] = useState(BULK_INTERVAL_DEFAULT);
+  const now = useNow();
   const enabled = accounts.filter((account) => account.enabled);
   const webhookAccounts = enabled.filter((account) => account.postingMode === 'webhook');
   const manualAccounts = enabled.filter((account) => account.postingMode === 'manual');
-  const lastPostMinutes = totalDurationMinutes(posts.length, interval);
+  const first = firstSlot(queueTail, interval, now);
+  const last = first + Math.max(0, posts.length - 1) * interval * 60_000;
+  const startsNow = first <= now;
   const plural = posts.length === 1 ? 'post' : 'posts';
 
   return (
@@ -61,10 +78,14 @@ export function BulkPublishModal({ open, posts, accounts, submitting, onCancel, 
         style={{ margin: '12px 8px 32px' }}
       />
       <Typography.Paragraph type="secondary">
-        {posts.length <= 1
-          ? 'The post goes live right away.'
-          : `The first post goes live right away, then one every ${interval} minutes. ` +
-            `The last post goes live in about ${lastPostMinutes} minutes.`}
+        {queuedCount > 0 &&
+          `${queuedCount} ${queuedCount === 1 ? 'post is' : 'posts are'} already queued; these join the end of the queue. `}
+        {startsNow
+          ? `The ${posts.length > 1 ? 'first post' : 'post'} goes live right away`
+          : `The ${posts.length > 1 ? 'first post' : 'post'} goes live at ${formatQueuedAt(first, now)}`}
+        {posts.length > 1
+          ? `, then one every ${interval} minutes. The last post goes live at ${formatQueuedAt(last, now)}.`
+          : '.'}
       </Typography.Paragraph>
 
       {webhookAccounts.length === 0 ? (

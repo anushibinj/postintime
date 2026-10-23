@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { intervalMarks, normalizeInterval, totalDurationMinutes } from './bulkPublishInterval';
+import { intervalMarks, normalizeInterval } from './bulkPublishInterval';
 
 describe('bulk publish interval', () => {
   it('snaps to 5 minute steps between 5 and 30', () => {
@@ -9,12 +9,6 @@ describe('bulk publish interval', () => {
     expect(normalizeInterval(0)).toBe(5);
     expect(normalizeInterval(45)).toBe(30);
     expect(normalizeInterval(Number.NaN)).toBe(5);
-  });
-
-  it('computes when the last post goes live', () => {
-    expect(totalDurationMinutes(1, 10)).toBe(0);
-    expect(totalDurationMinutes(4, 5)).toBe(15);
-    expect(totalDurationMinutes(0, 5)).toBe(0);
   });
 
   it('labels every slider step', () => {

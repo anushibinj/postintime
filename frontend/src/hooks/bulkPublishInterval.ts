@@ -13,11 +13,6 @@ export function normalizeInterval(value: number): number {
   return Math.min(BULK_INTERVAL_MAX, Math.max(BULK_INTERVAL_MIN, snapped));
 }
 
-/** Minutes until the last post goes live; the first post goes out right away. */
-export function totalDurationMinutes(postCount: number, intervalMinutes: number): number {
-  return Math.max(0, postCount - 1) * intervalMinutes;
-}
-
 export function intervalMarks(): Record<number, string> {
   const marks: Record<number, string> = {};
   for (let value = BULK_INTERVAL_MIN; value <= BULK_INTERVAL_MAX; value += BULK_INTERVAL_STEP) {
