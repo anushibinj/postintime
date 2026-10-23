@@ -4,7 +4,7 @@ flowchart TB
         Router[React Router]
         Query[TanStack Query]
         PostsPager[Channel posts pager]
-        BulkUI[Multiselect + bulk post modal<br/>interval slider 5-30 min]
+        BulkUI[Multiselect across pages + bulk post modal<br/>interval slider 5-30 min, queue panel]
         UI --> Router
         UI --> Query
         UI --> PostsPager
@@ -22,8 +22,8 @@ flowchart TB
         MediaThumbs[Thumbnails ?size=]
         Social[Social Account Module]
         Publishing[Publishing Module]
-        BulkPublish[Bulk Publish Jobs API]
-        BulkScheduler[Bulk Publish Scheduler<br/>one post per interval, sequential]
+        BulkPublish[Bulk Publish Jobs API<br/>appends to per-channel queue]
+        BulkScheduler[Bulk Publish Scheduler<br/>earliest due queued post, sequential]
         Public[Public API]
         Swagger[Swagger UI]
         Auth --> Channels
@@ -37,6 +37,7 @@ flowchart TB
         Channels --> Social
         Posts --> Publishing
         Social --> Publishing
+        BulkPublish -.->|queued posts locked| Publishing
         Channels --> BulkPublish
         BulkPublish --> BulkScheduler
         BulkScheduler --> Publishing
