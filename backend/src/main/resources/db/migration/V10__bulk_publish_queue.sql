@@ -29,8 +29,13 @@ WHERE id IN (
     WHERE rn > 1
 );
 
+-- Jobs left without queued posts are finished: completed if they posted anything, else cancelled.
 UPDATE bulk_publish_jobs j
-SET status = 'COMPLETED'
+SET status = CASE
+    WHEN EXISTS (SELECT 1 FROM bulk_publish_items i WHERE i.job_id = j.id AND i.processed_at IS NOT NULL)
+        THEN 'COMPLETED'
+    ELSE 'CANCELLED'
+END
 WHERE status = 'RUNNING'
   AND NOT EXISTS (SELECT 1 FROM bulk_publish_items i WHERE i.job_id = j.id AND i.status = 'PENDING');
 
