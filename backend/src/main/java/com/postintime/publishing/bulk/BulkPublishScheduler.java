@@ -25,6 +25,11 @@ public class BulkPublishScheduler {
 
     @Scheduled(fixedDelayString = "${app.bulk-publish.poll-interval-ms:10000}")
     public void publishDueItems() {
+        try {
+            processor.failStalledItems();
+        } catch (Exception ex) {
+            log.error("Bulk publish stall check failed", ex);
+        }
         for (int i = 0; i < MAX_ITEMS_PER_TICK; i++) {
             try {
                 if (!processor.processNextDueItem()) {

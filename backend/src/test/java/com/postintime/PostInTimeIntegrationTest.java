@@ -774,6 +774,118 @@ class PostInTimeIntegrationTest {
                 .andExpect(jsonPath("$.status").value("cancelled"));
     }
 
+    @Test
+    void bulkPublishHoldsNoLocksWhileAWebhookIsSlow() throws Exception {
+        java.util.concurrent.CountDownLatch received = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/slow", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            received.countDown();
+            try {
+                release.await(30, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'CANCELLED' WHERE status = 'PENDING'");
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            UUID manualAccountId = createSocialAccount(user1Token, techChannelId, "instagram", "Manual IG");
+            createWebhookAccount(techChannelId, "Slow hook",
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/slow");
+            UUID first = createPost(user1Token, techChannelId, "Slow First");
+            UUID second = createPost(user1Token, techChannelId, "Slow Second");
+            String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+            JsonNode job = objectMapper.readTree(mockMvc.perform(post(base)
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(5, first, second)))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString());
+            String jobUrl = base + "/" + job.get("id").asText();
+
+            var processing = executor.submit(() -> bulkPublishProcessor.processNextDueItem());
+            assertThat(received.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+
+            // The webhook is hanging; the queue must stay usable.
+            var cancelSecond = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                try {
+                    return mockMvc.perform(post(jobUrl + "/items/" + job.at("/items/1/id").asText() + "/cancel")
+                                    .header("Authorization", "Bearer " + user1Token))
+                            .andReturn().getResponse().getStatus();
+                } catch (Exception ex) {
+                    throw new IllegalStateException(ex);
+                }
+            });
+            assertThat(cancelSecond.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(200);
+
+            mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.items[0].status").value("publishing"))
+                    .andExpect(jsonPath("$.items[1].status").value("cancelled"));
+            mockMvc.perform(post(jobUrl + "/items/" + job.at("/items/0/id").asText() + "/cancel")
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("This post is being posted right now."));
+            mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + first)
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.bulkPublishScheduledAt").exists());
+            mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/" + first + "/targets/toggle")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"socialAccountId\":\"" + manualAccountId + "\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("POST_QUEUED"));
+            mockMvc.perform(post(base)
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(5, first)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("ALREADY_QUEUED"));
+
+            release.countDown();
+            assertThat(processing.get(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.status").value("completed"))
+                    .andExpect(jsonPath("$.items[0].status").value("published"));
+            mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + first)
+                            .header("Authorization", "Bearer " + user1Token))
+                    .andExpect(jsonPath("$.bulkPublishScheduledAt").doesNotExist());
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void bulkPublishFailsPostsLeftStalledByACrash() throws Exception {
+        createWebhookAccount(techChannelId, "Crash hook", "http://127.0.0.1:1/never-called");
+        UUID postId = createPost(user1Token, techChannelId, "Crashed Mid Post");
+        String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+        JsonNode job = objectMapper.readTree(mockMvc.perform(post(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bulkBody(5, postId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        // Simulate a backend that claimed the post and died 30 minutes ago.
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'PUBLISHING', processed_at = now() - interval '30 minutes', "
+                + "updated_at = now() - interval '30 minutes' WHERE job_id = ?", UUID.fromString(job.get("id").asText()));
+
+        bulkPublishProcessor.failStalledItems();
+
+        mockMvc.perform(get(base + "/" + job.get("id").asText()).header("Authorization", "Bearer " + user1Token))
+                .andExpect(jsonPath("$.status").value("completed"))
+                .andExpect(jsonPath("$.items[0].status").value("failed"))
+                .andExpect(jsonPath("$.items[0].errorMessage")
+                        .value(org.hamcrest.Matchers.startsWith("Interrupted")));
+    }
+
     private String bulkBody(int intervalMinutes, UUID... postIds) {
         var node = objectMapper.createObjectNode();
         node.put("intervalMinutes", intervalMinutes);

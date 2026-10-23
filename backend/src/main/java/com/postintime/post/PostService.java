@@ -9,7 +9,7 @@ import com.postintime.media.MediaResponse;
 import com.postintime.media.MediaService;
 import com.postintime.publishing.bulk.BulkPublishItem;
 import com.postintime.publishing.bulk.BulkPublishItemRepository;
-import com.postintime.publishing.bulk.BulkPublishItemStatus;
+import com.postintime.publishing.bulk.BulkPublishService;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.TargetStatus;
@@ -170,7 +170,7 @@ public class PostService {
                 post.getStatus().name().toLowerCase(),
                 new PublicationSummaryResponse(total, published, pending, failed),
                 targetSummaries,
-                bulkPublishItemRepository.findFirstByPostIdAndStatus(post.getId(), BulkPublishItemStatus.PENDING)
+                bulkPublishItemRepository.findFirstByPostIdAndStatusIn(post.getId(), BulkPublishService.OPEN_STATUSES)
                         .map(BulkPublishItem::getScheduledAt)
                         .orElse(null),
                 post.getCreatedAt(),

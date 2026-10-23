@@ -13,6 +13,7 @@ import com.postintime.social.SocialAccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -37,7 +38,8 @@ class BulkPublishProcessorTest {
     private final PostTargetRepository postTargetRepository = mock(PostTargetRepository.class);
     private final PublishingService publishingService = mock(PublishingService.class);
     private final BulkPublishProcessor processor = new BulkPublishProcessor(
-            jobRepository, itemRepository, socialAccountRepository, postTargetRepository, publishingService);
+            jobRepository, itemRepository, socialAccountRepository, postTargetRepository, publishingService,
+            mock(PlatformTransactionManager.class), Duration.ofMinutes(15));
 
     private Channel channel;
     private SocialAccount failing;
@@ -173,6 +175,53 @@ class BulkPublishProcessorTest {
         assertThat(thirdSlot.getValue()).isEqualTo(secondSlot.getValue().plus(interval));
     }
 
+    @Test
+    void claimsThePostBeforeCallingWebhooksAndSendsAHeartbeatPerAccount() {
+        BulkPublishJob job = job(5, Instant.now(), post("Only"));
+        BulkPublishItem item = job.getItems().get(0);
+        when(itemRepository.lockNextDueItem(any())).thenReturn(Optional.of(item));
+        when(publishingService.publishToWebhookAccount(any(), any())).thenAnswer(invocation -> {
+            assertThat(item.getStatus()).isEqualTo(BulkPublishItemStatus.PUBLISHING);
+            assertThat(item.getProcessedAt()).isNotNull();
+            return PublishResult.ok();
+        });
+
+        processor.processNextDueItem();
+
+        verify(itemRepository).save(item);
+        verify(itemRepository, org.mockito.Mockito.times(2)).touch(eq(item.getId()), any());
+        assertThat(item.getStatus()).isEqualTo(BulkPublishItemStatus.PUBLISHED);
+    }
+
+    @Test
+    void leavesAPostAloneWhenItWasFailedAsStalledMeanwhile() {
+        BulkPublishJob job = job(5, Instant.now(), post("Only"));
+        BulkPublishItem item = job.getItems().get(0);
+        when(itemRepository.lockNextDueItem(any())).thenReturn(Optional.of(item));
+        when(publishingService.publishToWebhookAccount(any(), any())).thenAnswer(invocation -> {
+            item.setStatus(BulkPublishItemStatus.FAILED);
+            return PublishResult.ok();
+        });
+
+        processor.processNextDueItem();
+
+        assertThat(item.getStatus()).isEqualTo(BulkPublishItemStatus.FAILED);
+    }
+
+    @Test
+    void failsStalledPostsAfterTheWebhookTimeoutPlusMargin() {
+        when(itemRepository.failStalled(any(), any())).thenReturn(1);
+
+        Instant before = Instant.now();
+        processor.failStalledItems();
+
+        var cutoff = org.mockito.ArgumentCaptor.forClass(Instant.class);
+        verify(itemRepository).failStalled(cutoff.capture(), any());
+        assertThat(cutoff.getValue()).isBefore(before.minus(Duration.ofMinutes(19)))
+                .isAfter(before.minus(Duration.ofMinutes(21)));
+        verify(jobRepository).completeJobsWithoutOpenItems();
+    }
+
     private SocialAccount account(String name, PostingMode mode, boolean enabled) {
         SocialAccount account = new SocialAccount();
         account.setId(UUID.randomUUID());
@@ -205,6 +254,7 @@ class BulkPublishProcessorTest {
             item.setScheduledAt(firstSlot.plus(Duration.ofMinutes((long) intervalMinutes * i)));
             job.getItems().add(item);
         }
+        when(jobRepository.lockByIdAndChannelId(job.getId(), channel.getId())).thenReturn(Optional.of(job));
         return job;
     }
 }

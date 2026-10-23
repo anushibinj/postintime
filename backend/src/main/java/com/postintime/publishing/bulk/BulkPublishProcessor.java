@@ -10,8 +10,10 @@ import com.postintime.social.SocialAccount;
 import com.postintime.social.SocialAccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -25,6 +27,10 @@ import java.util.UUID;
  * Publishes the next due post from the bulk publishing queues. Each call handles a single post and
  * calls the social account webhooks one after the other; failures are logged and recorded, never
  * allowed to stop the queue.
+ *
+ * <p>Webhooks can take up to {@code app.webhook.read-timeout} each, so no transaction is open while
+ * they run: a short transaction claims the post (status PUBLISHING), the webhooks are called, and a
+ * second short transaction records the outcome.
  */
 @Component
 public class BulkPublishProcessor {
@@ -34,22 +40,38 @@ public class BulkPublishProcessor {
     /** A post that went out within this long of its slot counts as on time. */
     static final Duration ON_TIME_GRACE = Duration.ofMinutes(1);
 
+    /** Extra time on top of the webhook timeout before a claimed post counts as abandoned. */
+    static final Duration STALL_MARGIN = Duration.ofMinutes(5);
+
     private final BulkPublishJobRepository jobRepository;
     private final BulkPublishItemRepository itemRepository;
     private final SocialAccountRepository socialAccountRepository;
     private final PostTargetRepository postTargetRepository;
     private final PublishingService publishingService;
+    private final TransactionTemplate transaction;
+    private final Duration webhookTimeout;
 
     public BulkPublishProcessor(BulkPublishJobRepository jobRepository,
                                 BulkPublishItemRepository itemRepository,
                                 SocialAccountRepository socialAccountRepository,
                                 PostTargetRepository postTargetRepository,
-                                PublishingService publishingService) {
+                                PublishingService publishingService,
+                                PlatformTransactionManager transactionManager,
+                                @Value("${app.webhook.read-timeout:15m}") Duration webhookTimeout) {
         this.jobRepository = jobRepository;
         this.itemRepository = itemRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.postTargetRepository = postTargetRepository;
         this.publishingService = publishingService;
+        this.transaction = new TransactionTemplate(transactionManager);
+        this.webhookTimeout = webhookTimeout;
+    }
+
+    private record Claim(UUID itemId, UUID jobId, UUID channelId, boolean channelEnabled, Post post,
+                         int position, Instant scheduledAt) {
+    }
+
+    private record Outcome(BulkPublishItemStatus status, String error) {
     }
 
     /**
@@ -57,60 +79,54 @@ public class BulkPublishProcessor {
      *
      * @return false when no post was due
      */
-    @Transactional
     public boolean processNextDueItem() {
-        Optional<BulkPublishItem> due = itemRepository.lockNextDueItem(Instant.now());
-        if (due.isEmpty()) {
+        Optional<Claim> claim = transaction.execute(status -> claimNextDueItem());
+        if (claim == null || claim.isEmpty()) {
             return false;
         }
-        BulkPublishItem item = due.get();
-        BulkPublishJob job = item.getJob();
-        processItem(job, item);
+        Outcome outcome = publish(claim.get());
         Instant finishedAt = Instant.now();
-
-        boolean jobHasPending = job.getItems().stream()
-                .anyMatch(other -> other.getStatus() == BulkPublishItemStatus.PENDING);
-        if (!jobHasPending) {
-            job.setStatus(BulkPublishJobStatus.COMPLETED);
-            log.info("Bulk publish job {} completed", job.getId());
-        }
-        jobRepository.save(job);
-        keepIntervals(job.getChannel().getId(), item.getScheduledAt(), finishedAt);
+        transaction.executeWithoutResult(status -> finish(claim.get(), outcome, finishedAt));
         return true;
     }
 
     /**
-     * Pushes later queued posts back so each still goes out at least its interval after the post
-     * before it. Posts only move when the queue runs late (for example, the backend was down);
-     * when posts go out on time every slot stays as promised.
+     * Fails posts whose claim went silent (the backend stopped mid-post). They are not retried,
+     * because the webhook may already have posted them.
      */
-    private void keepIntervals(UUID channelId, Instant slot, Instant finishedAt) {
-        Instant lateBase = finishedAt.minus(ON_TIME_GRACE);
-        Instant previous = slot.isAfter(lateBase) ? slot : lateBase;
-        for (BulkPublishItem next : itemRepository.findQueue(channelId, BulkPublishItemStatus.PENDING)) {
-            Instant earliest = previous.plus(Duration.ofMinutes(next.getJob().getIntervalMinutes()))
-                    .truncatedTo(ChronoUnit.SECONDS);
-            Instant nextSlot = next.getScheduledAt();
-            if (nextSlot.isBefore(earliest)) {
-                itemRepository.reschedule(next.getId(), earliest, BulkPublishItemStatus.PENDING);
-                log.info("Bulk publish queue for channel {} is late; post {} moved to {}",
-                        channelId, next.getPost().getId(), earliest);
-                nextSlot = earliest;
+    public void failStalledItems() {
+        Instant cutoff = Instant.now().minus(webhookTimeout).minus(STALL_MARGIN);
+        transaction.executeWithoutResult(status -> {
+            int stalled = itemRepository.failStalled(cutoff, "Interrupted: the backend stopped while posting. "
+                    + "Check the social accounts before posting it again.");
+            if (stalled > 0) {
+                log.warn("Bulk publish: marked {} stalled post(s) as failed", stalled);
+                jobRepository.completeJobsWithoutOpenItems();
             }
-            previous = nextSlot;
-        }
+        });
     }
 
-    private void processItem(BulkPublishJob job, BulkPublishItem item) {
-        Post post = item.getPost();
-        item.setProcessedAt(Instant.now());
-        if (!job.getChannel().isEnabled()) {
-            finish(job, item, BulkPublishItemStatus.SKIPPED, "Channel is disabled.");
-            return;
+    private Optional<Claim> claimNextDueItem() {
+        Optional<BulkPublishItem> due = itemRepository.lockNextDueItem(Instant.now());
+        if (due.isEmpty()) {
+            return Optional.empty();
         }
+        BulkPublishItem item = due.get();
+        BulkPublishJob job = item.getJob();
+        item.setStatus(BulkPublishItemStatus.PUBLISHING);
+        item.setProcessedAt(Instant.now());
+        itemRepository.save(item);
+        return Optional.of(new Claim(item.getId(), job.getId(), job.getChannel().getId(),
+                job.getChannel().isEnabled(), item.getPost(), item.getPosition(), item.getScheduledAt()));
+    }
 
+    private Outcome publish(Claim claim) {
+        if (!claim.channelEnabled()) {
+            return new Outcome(BulkPublishItemStatus.SKIPPED, "Channel is disabled.");
+        }
+        Post post = claim.post();
         List<SocialAccount> accounts = socialAccountRepository
-                .findByChannelIdOrderByNameAsc(job.getChannel().getId()).stream()
+                .findByChannelIdOrderByNameAsc(claim.channelId()).stream()
                 .filter(SocialAccount::isEnabled)
                 .filter(account -> account.getPostingMode() == PostingMode.WEBHOOK)
                 .toList();
@@ -130,26 +146,71 @@ public class BulkPublishProcessor {
                     String reason = result.errorMessage() != null ? result.errorMessage() : result.errorCode();
                     failures.add(account.getName() + ": " + reason);
                     log.warn("Bulk publish job {}: post {} failed on account {} ({}): {}",
-                            job.getId(), post.getId(), account.getId(), result.errorCode(), reason);
+                            claim.jobId(), post.getId(), account.getId(), result.errorCode(), reason);
                 }
             } catch (RuntimeException ex) {
                 failures.add(account.getName() + ": " + ex.getMessage());
                 log.warn("Bulk publish job {}: post {} failed on account {}",
-                        job.getId(), post.getId(), account.getId(), ex);
+                        claim.jobId(), post.getId(), account.getId(), ex);
             }
+            // Heartbeat: shows the claim is still alive (see failStalledItems).
+            itemRepository.touch(claim.itemId(), Instant.now());
         }
 
         if (failures.isEmpty()) {
             if (published > 0) {
-                finish(job, item, BulkPublishItemStatus.PUBLISHED, null);
-            } else {
-                finish(job, item, BulkPublishItemStatus.SKIPPED, accounts.isEmpty()
-                        ? "No enabled webhook social accounts."
-                        : "Already published to every webhook social account.");
+                return new Outcome(BulkPublishItemStatus.PUBLISHED, null);
             }
-        } else {
-            finish(job, item, published > 0 ? BulkPublishItemStatus.PARTIAL : BulkPublishItemStatus.FAILED,
-                    String.join("\n", failures));
+            return new Outcome(BulkPublishItemStatus.SKIPPED, accounts.isEmpty()
+                    ? "No enabled webhook social accounts."
+                    : "Already published to every webhook social account.");
+        }
+        return new Outcome(published > 0 ? BulkPublishItemStatus.PARTIAL : BulkPublishItemStatus.FAILED,
+                String.join("\n", failures));
+    }
+
+    private void finish(Claim claim, Outcome outcome, Instant finishedAt) {
+        BulkPublishJob job = jobRepository.lockByIdAndChannelId(claim.jobId(), claim.channelId()).orElse(null);
+        if (job == null) {
+            return; // The channel (and its queue) was deleted while posting.
+        }
+        job.getItems().stream()
+                .filter(item -> item.getId().equals(claim.itemId()))
+                .filter(item -> item.getStatus() == BulkPublishItemStatus.PUBLISHING)
+                .findFirst()
+                .ifPresent(item -> {
+                    item.setStatus(outcome.status());
+                    item.setErrorMessage(outcome.error());
+                    log.info("Bulk publish job {}: post {} (#{}) -> {}",
+                            job.getId(), claim.post().getId(), claim.position() + 1, outcome.status());
+                });
+        if (job.getStatus() == BulkPublishJobStatus.RUNNING && !BulkPublishService.hasOpenItems(job)) {
+            job.setStatus(BulkPublishJobStatus.COMPLETED);
+            log.info("Bulk publish job {} completed", job.getId());
+        }
+        jobRepository.save(job);
+        keepIntervals(claim.channelId(), claim.scheduledAt(), finishedAt);
+    }
+
+    /**
+     * Pushes later queued posts back so each still goes out at least its interval after the post
+     * before it. Posts only move when the queue runs late (for example, the backend was down or a
+     * webhook was slow); when posts go out on time every slot stays as promised.
+     */
+    private void keepIntervals(UUID channelId, Instant slot, Instant finishedAt) {
+        Instant lateBase = finishedAt.minus(ON_TIME_GRACE);
+        Instant previous = slot.isAfter(lateBase) ? slot : lateBase;
+        for (BulkPublishItem next : itemRepository.findQueue(channelId, BulkPublishItemStatus.PENDING)) {
+            Instant earliest = previous.plus(Duration.ofMinutes(next.getJob().getIntervalMinutes()))
+                    .truncatedTo(ChronoUnit.SECONDS);
+            Instant nextSlot = next.getScheduledAt();
+            if (nextSlot.isBefore(earliest)) {
+                itemRepository.reschedule(next.getId(), earliest, BulkPublishItemStatus.PENDING);
+                log.info("Bulk publish queue for channel {} is late; post {} moved to {}",
+                        channelId, next.getPost().getId(), earliest);
+                nextSlot = earliest;
+            }
+            previous = nextSlot;
         }
     }
 
@@ -157,12 +218,5 @@ public class BulkPublishProcessor {
         return postTargetRepository.findByPostIdAndSocialAccountId(post.getId(), account.getId())
                 .map(target -> target.getStatus() == TargetStatus.PUBLISHED)
                 .orElse(false);
-    }
-
-    private void finish(BulkPublishJob job, BulkPublishItem item, BulkPublishItemStatus status, String error) {
-        item.setStatus(status);
-        item.setErrorMessage(error);
-        log.info("Bulk publish job {}: post {} (#{}) -> {}",
-                job.getId(), item.getPost().getId(), item.getPosition() + 1, status);
     }
 }

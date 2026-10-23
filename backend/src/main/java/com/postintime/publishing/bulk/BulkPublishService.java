@@ -31,6 +31,10 @@ public class BulkPublishService {
 
     private static final int RECENT_JOBS_LIMIT = 10;
 
+    /** Statuses of posts that are still in the queue: waiting for their slot or being posted. */
+    public static final List<BulkPublishItemStatus> OPEN_STATUSES =
+            List.of(BulkPublishItemStatus.PENDING, BulkPublishItemStatus.PUBLISHING);
+
     private final BulkPublishJobRepository jobRepository;
     private final BulkPublishItemRepository itemRepository;
     private final ChannelService channelService;
@@ -74,8 +78,8 @@ public class BulkPublishService {
 
         // Serialize appends so two batches never compute the same queue tail.
         jobRepository.lockChannelQueue(channelId);
-        List<BulkPublishItem> alreadyQueued = itemRepository.findByPostIdInAndStatus(
-                posts.stream().map(Post::getId).toList(), BulkPublishItemStatus.PENDING);
+        List<BulkPublishItem> alreadyQueued = itemRepository.findByPostIdInAndStatusIn(
+                posts.stream().map(Post::getId).toList(), OPEN_STATUSES);
         if (!alreadyQueued.isEmpty()) {
             throw new BusinessException("ALREADY_QUEUED", "Already queued for bulk posting: "
                     + String.join(", ", alreadyQueued.stream().map(item -> item.getPost().getTitle()).toList())
@@ -140,13 +144,14 @@ public class BulkPublishService {
                 .filter(candidate -> candidate.getId().equals(itemId))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Bulk publish item not found."));
+        if (item.getStatus() == BulkPublishItemStatus.PUBLISHING) {
+            throw new BusinessException("INVALID_STATE", "This post is being posted right now.");
+        }
         if (item.getStatus() != BulkPublishItemStatus.PENDING) {
             throw new BusinessException("INVALID_STATE", "Only queued posts can be removed from the queue.");
         }
         item.setStatus(BulkPublishItemStatus.CANCELLED);
-        boolean anyPending = job.getItems().stream()
-                .anyMatch(other -> other.getStatus() == BulkPublishItemStatus.PENDING);
-        if (!anyPending) {
+        if (!hasOpenItems(job)) {
             boolean anyProcessed = job.getItems().stream().anyMatch(other -> other.getProcessedAt() != null);
             job.setStatus(anyProcessed ? BulkPublishJobStatus.COMPLETED : BulkPublishJobStatus.CANCELLED);
         }
@@ -162,6 +167,10 @@ public class BulkPublishService {
             throw new BusinessException("INVALID_STATE", "This bulk publish job is no longer running.");
         }
         return job;
+    }
+
+    static boolean hasOpenItems(BulkPublishJob job) {
+        return job.getItems().stream().anyMatch(item -> OPEN_STATUSES.contains(item.getStatus()));
     }
 
     static int resolveInterval(Integer requested) {

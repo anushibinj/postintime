@@ -12,7 +12,7 @@ import com.postintime.publishing.api.SocialAccountSummary;
 import com.postintime.publishing.api.TargetResponse;
 import com.postintime.publishing.api.TogglePublishedRequest;
 import com.postintime.publishing.bulk.BulkPublishItemRepository;
-import com.postintime.publishing.bulk.BulkPublishItemStatus;
+import com.postintime.publishing.bulk.BulkPublishService;
 import com.postintime.publishing.domain.PostTarget;
 import com.postintime.publishing.domain.PostTargetRepository;
 import com.postintime.publishing.domain.PublishContext;
@@ -230,7 +230,7 @@ public class PublishingService {
 
     /** Posts waiting in the bulk publishing queue are published only by the queue. */
     private void ensureNotQueued(UUID postId) {
-        if (bulkPublishItemRepository.findFirstByPostIdAndStatus(postId, BulkPublishItemStatus.PENDING).isPresent()) {
+        if (bulkPublishItemRepository.findFirstByPostIdAndStatusIn(postId, BulkPublishService.OPEN_STATUSES).isPresent()) {
             throw new BusinessException("POST_QUEUED",
                     "This post is queued for bulk posting. Remove it from the queue to post it individually.");
         }
