@@ -1,18 +1,17 @@
-import { Button, Card, Collapse, Popconfirm, Progress, Space, Tag, Typography, message } from 'antd';
+import { Button, Card, Collapse, Popconfirm, Space, Tag, Tooltip, Typography, message } from 'antd';
+import { X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { BulkPublishItemStatus, BulkPublishJob, BulkPublishJobStatus } from '../../types';
+import type { BulkPublishItem, BulkPublishItemStatus, BulkPublishJob } from '../../types';
 import { useBulkPublishJobs, useBulkPublishMutations } from '../../hooks/useBulkPublish';
+import { useNow } from '../../hooks/useNow';
+import { formatQueuedAt } from '../../hooks/bulkPublishTime';
 
-const JOB_STATUS: Record<BulkPublishJobStatus, { color: string; label: string }> = {
-  running: { color: 'processing', label: 'Running' },
-  completed: { color: 'success', label: 'Completed' },
-  cancelled: { color: 'default', label: 'Cancelled' },
-};
+const RECENT_LIMIT = 20;
 
 const ITEM_STATUS: Record<BulkPublishItemStatus, { color: string; label: string }> = {
-  pending: { color: 'default', label: 'Pending' },
+  pending: { color: 'default', label: 'Queued' },
   published: { color: 'success', label: 'Published' },
   partial: { color: 'warning', label: 'Partly failed' },
   failed: { color: 'error', label: 'Failed' },
@@ -20,13 +19,17 @@ const ITEM_STATUS: Record<BulkPublishItemStatus, { color: string; label: string 
   cancelled: { color: 'default', label: 'Cancelled' },
 };
 
+type QueueEntry = { job: BulkPublishJob; item: BulkPublishItem };
+
+/** The channel's bulk posting queue plus the most recent bulk posts that already went out. */
 export function BulkPublishJobs({ channelId }: { channelId: string }) {
   const { data } = useBulkPublishJobs(channelId);
-  const jobs = data ?? [];
-  const { cancel } = useBulkPublishMutations(channelId);
+  const { cancel, cancelItem } = useBulkPublishMutations(channelId);
   const queryClient = useQueryClient();
+  const now = useNow();
+  const jobs = data ?? [];
 
-  // Refresh the post list (published badges) whenever a job publishes another post.
+  // Refresh the post list (published badges, queued labels) whenever the queue publishes a post.
   const progressKey = data?.map((job) => `${job.id}:${job.processedItems}`).join(',');
   const lastProgressKey = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -39,120 +42,132 @@ export function BulkPublishJobs({ channelId }: { channelId: string }) {
     lastProgressKey.current = progressKey;
   }, [progressKey, channelId, queryClient]);
 
-  if (jobs.length === 0) {
+  const entries = jobs.flatMap((job) => job.items.map((item) => ({ job, item })));
+  const queue = entries
+    .filter(({ item }) => item.status === 'pending')
+    .sort((a, b) => Date.parse(a.item.scheduledAt) - Date.parse(b.item.scheduledAt));
+  const recent = entries
+    .filter(({ item }) => item.processedAt)
+    .sort((a, b) => Date.parse(b.item.processedAt!) - Date.parse(a.item.processedAt!))
+    .slice(0, RECENT_LIMIT);
+
+  if (queue.length === 0 && recent.length === 0) {
     return null;
   }
 
-  const running = jobs.filter((job) => job.status === 'running');
-  const finished = jobs.filter((job) => job.status !== 'running');
-
-  const handleCancel = async (jobId: string) => {
+  const handleRemove = async ({ job, item }: QueueEntry) => {
     try {
-      await cancel.mutateAsync(jobId);
-      message.success('Bulk posting cancelled');
+      await cancelItem.mutateAsync({ jobId: job.id, itemId: item.id });
+      message.success(`Removed "${item.postTitle}" from the queue`);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : 'Could not cancel bulk posting');
+      message.error(error instanceof Error ? error.message : 'Could not remove the post from the queue');
+    }
+  };
+
+  const handleCancelAll = async () => {
+    const running = jobs.filter((job) => job.status === 'running');
+    try {
+      for (const job of running) {
+        await cancel.mutateAsync(job.id);
+      }
+      message.success('Bulk posting queue cleared');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Could not clear the queue');
     }
   };
 
   return (
     <div style={{ marginBottom: 16 }}>
-      {running.map((job) => (
+      {queue.length > 0 && (
         <Card
-          key={job.id}
           size="small"
           style={{ marginBottom: 8 }}
-          title={<JobTitle job={job} />}
+          title={
+            <Space size={8}>
+              <Typography.Text strong>Bulk posting queue</Typography.Text>
+              <Tag color="processing">{queue.length} {queue.length === 1 ? 'post' : 'posts'}</Tag>
+            </Space>
+          }
           extra={
             <Popconfirm
-              title="Cancel bulk posting?"
+              title="Cancel all queued posts?"
               description="Posts that have not gone live yet will not be posted."
-              okText="Cancel posting"
-              cancelText="Keep going"
-              onConfirm={() => handleCancel(job.id)}
+              okText="Cancel all"
+              cancelText="Keep them"
+              onConfirm={handleCancelAll}
             >
-              <Button size="small" danger loading={cancel.isPending && cancel.variables === job.id}>
-                Cancel
+              <Button size="small" danger loading={cancel.isPending}>
+                Cancel all
               </Button>
             </Popconfirm>
           }
         >
-          <JobBody job={job} />
+          <ol style={{ margin: 0, paddingLeft: 20 }}>
+            {queue.map((entry) => (
+              <li key={entry.item.id} style={{ marginBottom: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Typography.Text strong style={{ flexShrink: 0 }}>
+                    {formatQueuedAt(Date.parse(entry.item.scheduledAt), now)}
+                  </Typography.Text>
+                  <Typography.Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+                    {entry.item.postTitle}
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
+                    {entry.job.intervalMinutes} min gap
+                  </Typography.Text>
+                  <Tooltip title="Remove from queue">
+                    <Button
+                      size="small"
+                      type="text"
+                      aria-label={`Remove ${entry.item.postTitle} from the queue`}
+                      icon={<X size={14} />}
+                      loading={cancelItem.isPending && cancelItem.variables?.itemId === entry.item.id}
+                      onClick={() => handleRemove(entry)}
+                    />
+                  </Tooltip>
+                </div>
+              </li>
+            ))}
+          </ol>
         </Card>
-      ))}
-      {finished.length > 0 && (
+      )}
+      {recent.length > 0 && (
         <Collapse
           size="small"
           items={[
             {
               key: 'recent',
-              label: `Recent bulk posts (${finished.length})`,
-              children: finished.map((job) => (
-                <div key={job.id} style={{ marginBottom: 12 }}>
-                  <JobTitle job={job} />
-                  <JobBody job={job} />
-                </div>
-              )),
+              label: `Recent bulk posts (${recent.length})`,
+              children: (
+                <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
+                  {recent.map(({ item }) => {
+                    const status = ITEM_STATUS[item.status];
+                    return (
+                      <li key={item.id} style={{ marginBottom: 6 }}>
+                        <Space size={8} wrap>
+                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            {format(Date.parse(item.processedAt!), 'MMM d, h:mm a')}
+                          </Typography.Text>
+                          <Typography.Text ellipsis style={{ maxWidth: 360 }}>{item.postTitle}</Typography.Text>
+                          <Tag color={status.color} style={{ marginInlineEnd: 0 }}>{status.label}</Tag>
+                        </Space>
+                        {item.errorMessage && (
+                          <Typography.Paragraph
+                            type={item.status === 'skipped' ? 'secondary' : 'danger'}
+                            style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap' }}
+                          >
+                            {item.errorMessage}
+                          </Typography.Paragraph>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ),
             },
           ]}
         />
       )}
-    </div>
-  );
-}
-
-function JobTitle({ job }: { job: BulkPublishJob }) {
-  const status = JOB_STATUS[job.status];
-  return (
-    <Space size={8} wrap>
-      <Typography.Text strong>
-        Bulk post · {job.totalItems} {job.totalItems === 1 ? 'post' : 'posts'} · every {job.intervalMinutes} min
-      </Typography.Text>
-      <Tag color={status.color}>{status.label}</Tag>
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        Started {format(new Date(job.createdAt), 'MMM d, h:mm a')}
-      </Typography.Text>
-    </Space>
-  );
-}
-
-function JobBody({ job }: { job: BulkPublishJob }) {
-  const percent = job.totalItems === 0 ? 0 : Math.round((job.processedItems / job.totalItems) * 100);
-  return (
-    <div>
-      <Progress
-        percent={percent}
-        size="small"
-        status={job.status === 'running' ? 'active' : job.failedItems > 0 ? 'exception' : 'normal'}
-        format={() => `${job.processedItems}/${job.totalItems}`}
-      />
-      <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-        {job.status === 'running' && job.nextRunAt
-          ? `Next post at ${format(new Date(job.nextRunAt), 'h:mm a')}`
-          : null}
-        {job.failedItems > 0 ? `${job.status === 'running' ? ' · ' : ''}${job.failedItems} with failures` : null}
-      </Typography.Text>
-      <ol style={{ margin: 0, paddingLeft: 20 }}>
-        {job.items.map((item) => {
-          const status = ITEM_STATUS[item.status];
-          return (
-            <li key={item.id} style={{ marginBottom: 2 }}>
-              <Space size={6} align="start" wrap>
-                <Typography.Text ellipsis style={{ maxWidth: 360 }}>{item.postTitle}</Typography.Text>
-                <Tag color={status.color} style={{ marginInlineEnd: 0 }}>{status.label}</Tag>
-              </Space>
-              {item.errorMessage && (
-                <Typography.Paragraph
-                  type={item.status === 'skipped' ? 'secondary' : 'danger'}
-                  style={{ margin: 0, fontSize: 12, whiteSpace: 'pre-wrap' }}
-                >
-                  {item.errorMessage}
-                </Typography.Paragraph>
-              )}
-            </li>
-          );
-        })}
-      </ol>
     </div>
   );
 }
