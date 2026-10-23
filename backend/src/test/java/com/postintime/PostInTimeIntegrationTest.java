@@ -600,6 +600,8 @@ class PostInTimeIntegrationTest {
             inFlight.decrementAndGet();
         });
         server.start();
+        // processNextDueItem works across channels; park anything other tests left queued.
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'CANCELLED' WHERE status = 'PENDING'");
         try {
             String root = "http://127.0.0.1:" + server.getAddress().getPort();
             createWebhookAccount(techChannelId, "A failing hook", root + "/fail");
@@ -622,9 +624,9 @@ class PostInTimeIntegrationTest {
                     .get("id").asText());
             String jobUrl = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs/" + jobId;
 
-            assertThat(bulkPublishProcessor.processNextDueJob()).isTrue();
+            assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
             // The second post waits for the interval.
-            assertThat(bulkPublishProcessor.processNextDueJob()).isFalse();
+            assertThat(bulkPublishProcessor.processNextDueItem()).isFalse();
             assertThat(received).containsExactly("/fail first", "/ok first");
 
             mockMvc.perform(get(jobUrl).header("Authorization", "Bearer " + user1Token))
@@ -637,8 +639,9 @@ class PostInTimeIntegrationTest {
                             .value(org.hamcrest.Matchers.containsString("A failing hook")))
                     .andExpect(jsonPath("$.items[1].status").value("pending"));
 
-            jdbcTemplate.update("UPDATE bulk_publish_jobs SET next_run_at = now() WHERE id = ?", jobId);
-            assertThat(bulkPublishProcessor.processNextDueJob()).isTrue();
+            jdbcTemplate.update("UPDATE bulk_publish_items SET scheduled_at = now() WHERE job_id = ? AND status = 'PENDING'",
+                    jobId);
+            assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
             assertThat(received).containsExactly("/fail first", "/ok first", "/fail second", "/ok second");
             assertThat(maxInFlight.get()).isEqualTo(1);
 

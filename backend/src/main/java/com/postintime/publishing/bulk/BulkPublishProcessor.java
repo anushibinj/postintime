@@ -15,65 +15,90 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Publishes the next pending item of a due bulk publish job. Each call handles a single post and
+ * Publishes the next due post from the bulk publishing queues. Each call handles a single post and
  * calls the social account webhooks one after the other; failures are logged and recorded, never
- * allowed to stop the job.
+ * allowed to stop the queue.
  */
 @Component
 public class BulkPublishProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(BulkPublishProcessor.class);
 
+    /** A post that went out within this long of its slot counts as on time. */
+    static final Duration ON_TIME_GRACE = Duration.ofMinutes(1);
+
     private final BulkPublishJobRepository jobRepository;
+    private final BulkPublishItemRepository itemRepository;
     private final SocialAccountRepository socialAccountRepository;
     private final PostTargetRepository postTargetRepository;
     private final PublishingService publishingService;
 
     public BulkPublishProcessor(BulkPublishJobRepository jobRepository,
+                                BulkPublishItemRepository itemRepository,
                                 SocialAccountRepository socialAccountRepository,
                                 PostTargetRepository postTargetRepository,
                                 PublishingService publishingService) {
         this.jobRepository = jobRepository;
+        this.itemRepository = itemRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.postTargetRepository = postTargetRepository;
         this.publishingService = publishingService;
     }
 
     /**
-     * Processes one item of the earliest due job.
+     * Publishes the earliest due queued post.
      *
-     * @return false when no job was due
+     * @return false when no post was due
      */
     @Transactional
-    public boolean processNextDueJob() {
-        Optional<BulkPublishJob> due = jobRepository.lockNextDueJob(Instant.now());
+    public boolean processNextDueItem() {
+        Optional<BulkPublishItem> due = itemRepository.lockNextDueItem(Instant.now());
         if (due.isEmpty()) {
             return false;
         }
-        BulkPublishJob job = due.get();
-        nextPending(job).ifPresent(item -> processItem(job, item));
+        BulkPublishItem item = due.get();
+        BulkPublishJob job = item.getJob();
+        processItem(job, item);
+        Instant finishedAt = Instant.now();
 
-        if (nextPending(job).isPresent()) {
-            // The interval counts from when this post finished, so slow webhooks never squeeze the gap.
-            job.setNextRunAt(Instant.now().plus(Duration.ofMinutes(job.getIntervalMinutes())));
-        } else {
+        boolean jobHasPending = job.getItems().stream()
+                .anyMatch(other -> other.getStatus() == BulkPublishItemStatus.PENDING);
+        if (!jobHasPending) {
             job.setStatus(BulkPublishJobStatus.COMPLETED);
-            job.setNextRunAt(null);
             log.info("Bulk publish job {} completed", job.getId());
         }
         jobRepository.save(job);
+        keepIntervals(job.getChannel().getId(), item.getScheduledAt(), finishedAt);
         return true;
     }
 
-    private Optional<BulkPublishItem> nextPending(BulkPublishJob job) {
-        return job.getItems().stream()
-                .filter(item -> item.getStatus() == BulkPublishItemStatus.PENDING)
-                .findFirst();
+    /**
+     * Pushes later queued posts back so each still goes out at least its interval after the post
+     * before it. Posts only move when the queue runs late (for example, the backend was down);
+     * when posts go out on time every slot stays as promised.
+     */
+    private void keepIntervals(UUID channelId, Instant slot, Instant finishedAt) {
+        Instant lateBase = finishedAt.minus(ON_TIME_GRACE);
+        Instant previous = slot.isAfter(lateBase) ? slot : lateBase;
+        for (BulkPublishItem next : itemRepository.findQueue(channelId, BulkPublishItemStatus.PENDING)) {
+            Instant earliest = previous.plus(Duration.ofMinutes(next.getJob().getIntervalMinutes()))
+                    .truncatedTo(ChronoUnit.SECONDS);
+            Instant nextSlot = next.getScheduledAt();
+            if (nextSlot.isBefore(earliest)) {
+                itemRepository.reschedule(next.getId(), earliest, BulkPublishItemStatus.PENDING);
+                log.info("Bulk publish queue for channel {} is late; post {} moved to {}",
+                        channelId, next.getPost().getId(), earliest);
+                nextSlot = earliest;
+            }
+            previous = nextSlot;
+        }
     }
 
     private void processItem(BulkPublishJob job, BulkPublishItem item) {

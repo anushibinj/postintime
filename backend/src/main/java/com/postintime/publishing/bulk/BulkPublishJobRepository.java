@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,18 +19,14 @@ public interface BulkPublishJobRepository extends JpaRepository<BulkPublishJob, 
     @Query("SELECT j FROM BulkPublishJob j WHERE j.id = :id AND j.channel.id = :channelId")
     Optional<BulkPublishJob> lockByIdAndChannelId(@Param("id") UUID id, @Param("channelId") UUID channelId);
 
-    List<BulkPublishJob> findByChannelIdOrderByCreatedAtDesc(UUID channelId, Pageable pageable);
 
-    /**
-     * Locks the earliest due running job. SKIP LOCKED keeps two backend instances from
-     * processing the same job at once.
-     */
-    @Query(value = """
-            SELECT * FROM bulk_publish_jobs
-            WHERE status = 'RUNNING' AND next_run_at <= :now
-            ORDER BY next_run_at
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
-            """, nativeQuery = true)
-    Optional<BulkPublishJob> lockNextDueJob(@Param("now") Instant now);
+    List<BulkPublishJob> findByChannelIdAndStatusOrderByCreatedAtAsc(UUID channelId, BulkPublishJobStatus status);
+
+    List<BulkPublishJob> findByChannelIdAndStatusNotOrderByCreatedAtDesc(UUID channelId,
+                                                                         BulkPublishJobStatus status,
+                                                                         Pageable pageable);
+
+    /** Locks the channel row so queue appends for one channel happen one at a time. */
+    @Query(value = "SELECT id FROM channels WHERE id = :channelId FOR UPDATE", nativeQuery = true)
+    UUID lockChannelQueue(@Param("channelId") UUID channelId);
 }

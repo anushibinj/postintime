@@ -44,4 +44,11 @@ public class BulkPublishController {
     public BulkPublishJobResponse cancelJob(@PathVariable UUID channelId, @PathVariable UUID jobId) {
         return bulkPublishService.cancelJob(channelId, jobId);
     }
+
+    @PostMapping("/{jobId}/items/{itemId}/cancel")
+    public BulkPublishJobResponse cancelItem(@PathVariable UUID channelId,
+                                             @PathVariable UUID jobId,
+                                             @PathVariable UUID itemId) {
+        return bulkPublishService.cancelItem(channelId, jobId, itemId);
+    }
 }

@@ -44,9 +44,6 @@ public class BulkPublishJob {
     @Column(nullable = false, length = 30)
     private BulkPublishJobStatus status = BulkPublishJobStatus.RUNNING;
 
-    @Column(name = "next_run_at")
-    private Instant nextRunAt;
-
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<BulkPublishItem> items = new ArrayList<>();

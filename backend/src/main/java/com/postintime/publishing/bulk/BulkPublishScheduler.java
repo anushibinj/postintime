@@ -6,8 +6,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Polls for due bulk publish jobs. Runs on Spring's single scheduler thread, so posts are always
- * published one at a time, never in parallel.
+ * Polls the bulk publishing queues for due posts. Runs on Spring's single scheduler thread, so
+ * posts are always published one at a time, never in parallel.
  */
 @Component
 public class BulkPublishScheduler {
@@ -27,7 +27,7 @@ public class BulkPublishScheduler {
     public void publishDueItems() {
         for (int i = 0; i < MAX_ITEMS_PER_TICK; i++) {
             try {
-                if (!processor.processNextDueJob()) {
+                if (!processor.processNextDueItem()) {
                     return;
                 }
             } catch (Exception ex) {

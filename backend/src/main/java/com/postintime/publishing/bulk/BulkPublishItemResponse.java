@@ -9,6 +9,7 @@ public record BulkPublishItemResponse(
         String postTitle,
         int position,
         String status,
+        Instant scheduledAt,
         String errorMessage,
         Instant processedAt
 ) {

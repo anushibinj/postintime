@@ -43,6 +43,10 @@ public class BulkPublishItem {
     @Column(nullable = false, length = 30)
     private BulkPublishItemStatus status = BulkPublishItemStatus.PENDING;
 
+    /** When this post goes live; the channel's queue is ordered by this. */
+    @Column(name = "scheduled_at", nullable = false)
+    private Instant scheduledAt;
+
     @Column(name = "error_message")
     private String errorMessage;
 
