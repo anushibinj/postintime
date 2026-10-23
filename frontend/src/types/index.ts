@@ -116,3 +116,30 @@ export interface PublishResponse {
   publishingMode: PostingMode;
   instructions: PublishInstructions;
 }
+
+export type BulkPublishJobStatus = 'running' | 'completed' | 'cancelled';
+export type BulkPublishItemStatus = 'pending' | 'published' | 'partial' | 'failed' | 'skipped' | 'cancelled';
+
+export interface BulkPublishItem {
+  id: string;
+  postId: string;
+  postTitle: string;
+  position: number;
+  status: BulkPublishItemStatus;
+  errorMessage?: string | null;
+  processedAt?: string | null;
+}
+
+export interface BulkPublishJob {
+  id: string;
+  channelId: string;
+  intervalMinutes: number;
+  status: BulkPublishJobStatus;
+  nextRunAt?: string | null;
+  totalItems: number;
+  processedItems: number;
+  failedItems: number;
+  items: BulkPublishItem[];
+  createdAt: string;
+  updatedAt: string;
+}
