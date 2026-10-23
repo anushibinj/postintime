@@ -13,10 +13,11 @@ export async function createBulkPublishJob(
   channelId: string,
   postIds: string[],
   intervalMinutes: number,
+  socialAccountIds: string[],
 ): Promise<BulkPublishJob> {
   return apiFetch<BulkPublishJob>(jobsPath(channelId), {
     method: 'POST',
-    body: JSON.stringify({ postIds, intervalMinutes }),
+    body: JSON.stringify({ postIds, intervalMinutes, socialAccountIds }),
   });
 }
 

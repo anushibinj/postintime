@@ -143,6 +143,8 @@ export interface BulkPublishJob {
   processedItems: number;
   failedItems: number;
   items: BulkPublishItem[];
+  /** Social accounts every post of the job goes to. */
+  socialAccountIds: string[];
   createdAt: string;
   updatedAt: string;
 }
