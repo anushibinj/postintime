@@ -14,3 +14,6 @@ app:
   storage:
     type: local
     local-path: ./target/test-storage
+  bulk-publish:
+    # Tests drive BulkPublishProcessor directly; keep the background poller out of the way.
+    poll-interval-ms: 3600000
