@@ -20,6 +20,10 @@ export async function createBulkPublishJob(
   });
 }
 
+export async function cancelBulkPublishItem(channelId: string, jobId: string, itemId: string): Promise<BulkPublishJob> {
+  return apiFetch<BulkPublishJob>(`${jobsPath(channelId)}/${jobId}/items/${itemId}/cancel`, { method: 'POST' });
+}
+
 export async function cancelBulkPublishJob(channelId: string, jobId: string): Promise<BulkPublishJob> {
   return apiFetch<BulkPublishJob>(`${jobsPath(channelId)}/${jobId}/cancel`, { method: 'POST' });
 }

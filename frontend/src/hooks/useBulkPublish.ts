@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { cancelBulkPublishJob, createBulkPublishJob, fetchBulkPublishJobs } from '../api/bulkPublish';
+import {
+  cancelBulkPublishItem,
+  cancelBulkPublishJob,
+  createBulkPublishJob,
+  fetchBulkPublishJobs,
+} from '../api/bulkPublish';
 
 const RUNNING_POLL_MS = 10_000;
 
@@ -19,6 +24,7 @@ export function useBulkPublishMutations(channelId: string) {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['bulk-publish-jobs', channelId] });
     queryClient.invalidateQueries({ queryKey: ['posts', channelId] });
+    queryClient.invalidateQueries({ queryKey: ['post', channelId] });
   };
 
   return {
@@ -29,6 +35,11 @@ export function useBulkPublishMutations(channelId: string) {
     }),
     cancel: useMutation({
       mutationFn: (jobId: string) => cancelBulkPublishJob(channelId, jobId),
+      onSuccess: invalidate,
+    }),
+    cancelItem: useMutation({
+      mutationFn: ({ jobId, itemId }: { jobId: string; itemId: string }) =>
+        cancelBulkPublishItem(channelId, jobId, itemId),
       onSuccess: invalidate,
     }),
   };

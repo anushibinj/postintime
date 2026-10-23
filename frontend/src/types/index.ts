@@ -60,6 +60,8 @@ export interface Post {
   status: PostStatus;
   publicationSummary?: PublicationSummary;
   targets?: PostTargetSummary[];
+  /** When the channel's bulk posting queue will post this; absent when not queued. */
+  bulkPublishScheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +128,7 @@ export interface BulkPublishItem {
   postTitle: string;
   position: number;
   status: BulkPublishItemStatus;
+  scheduledAt: string;
   errorMessage?: string | null;
   processedAt?: string | null;
 }
