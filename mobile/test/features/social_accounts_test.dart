@@ -158,7 +158,7 @@ void main() {
   });
 
   testWidgets('accounts added here show up as publish buttons on the posts', (tester) async {
-    final opened = await openAccounts(tester, seed: (app, channelId) => app.backend.addPost(channelId, title: 'A post'));
+    await openAccounts(tester, seed: (app, channelId) => app.backend.addPost(channelId, title: 'A post'));
     await tapText(tester, 'Add Account');
     await tester.tap(platformDropdown);
     await tester.pumpAndSettle();

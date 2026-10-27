@@ -97,7 +97,8 @@ void main() {
   testWidgets('changes a token expiry, including back to never', (tester) async {
     final app = await openSettings(tester, seed: (app) => app.backend.apiTokens.add(token('a1', 'CI', expiresAt: '2027-03-05T12:00:00Z')));
 
-    await tester.tap(find.text('Change expiry'));
+    expect(find.text('Change expiry'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('90 days').last);
     await tester.pumpAndSettle();
