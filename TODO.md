@@ -4,6 +4,8 @@
 
 - [ ] `cd backend && mvn clean test` needs PostgreSQL on `localhost:5432` (see `docker compose up -d`). In this Cloud Agent VM Docker is not installed, so those integration tests fail with connection refused. Frontend `pnpm lint && pnpm test && pnpm build` passes after the register-form fix.
 
+- [ ] The Flutter SDK is not installed in this Cloud Agent VM. To run `mobile/` checks (`flutter analyze && flutter test`), download the SDK from https://storage.googleapis.com/flutter_infra_release/ (stable 3.47.x) first. Android and iOS builds additionally need the Android SDK / Xcode, so only analysis, the widget tests and the web build were run for the mobile app.
+
 ## MVP
 
 - [x] Phase 0: Foundation — Docker, Spring Boot, React/Vite, JWT auth, Flyway, CI
@@ -31,6 +33,7 @@
 - [x] REST API for creation of posts - Add a new REST API that can be accessible by the public to create new posts for a Channel. Accept whatever input is needed to create a post - the channel ID, post title, caption and media. Authenticate via API keys.
 - [x] Swagger doc for all the public APIs - Creation of posts and Listing of channels for a user.
 - [x] Create a Postgres DB in Neon DB service (cloud)
+- [x] Build a Flutter mobile client (`mobile/`) that mirrors the web frontend: auth, channels, posts with image upload, publishing targets, bulk posting queue, social accounts and API tokens
 - [ ] Deploy the Spring Boot Backend into Google Cloud Run
   - [ ] Set JWT_SECRET
   - [ ] Set S3 details
