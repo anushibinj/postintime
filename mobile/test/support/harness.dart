@@ -106,3 +106,9 @@ Future<void> tapText(WidgetTester tester, String text, {bool settle = true}) asy
     await tester.pumpAndSettle();
   }
 }
+
+/// Scrolls the page's list until [finder] is built and on screen, like a user would.
+Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(finder, 300, scrollable: find.byType(Scrollable).first);
+  await tester.pumpAndSettle();
+}
