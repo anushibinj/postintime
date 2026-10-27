@@ -75,7 +75,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             PasswordField(
               controller: _password,
               label: 'Password',
-              hint: 'Password',
               autofillHints: const [AutofillHints.password],
               textInputAction: TextInputAction.done,
               validator: (value) => (value ?? '').isEmpty ? 'Password is required' : null,
@@ -89,8 +88,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   : const Text('Sign In'),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Text('No account?'),
                 TextButton(onPressed: () => context.go('/register'), child: const Text('Register')),

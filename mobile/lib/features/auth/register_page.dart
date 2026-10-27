@@ -99,8 +99,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   : const Text('Register'),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Text('Already have an account?'),
                 TextButton(onPressed: () => context.go('/login'), child: const Text('Sign in')),
