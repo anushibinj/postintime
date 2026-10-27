@@ -13,6 +13,16 @@ flowchart TB
         BulkUI --> Query
     end
 
+    subgraph Mobile["Mobile (Flutter, Android + iOS)"]
+        MobileUI[PostInTime mobile app<br/>same screens as the web UI]
+        MobileRouter[go_router]
+        MobileState[Riverpod providers + actions]
+        MobileClient[API client<br/>Bearer JWT, 15 min timeout, session expiry]
+        MobileUI --> MobileRouter
+        MobileUI --> MobileState
+        MobileState --> MobileClient
+    end
+
     subgraph API["Backend (Spring Boot)"]
         Auth[Auth Module]
         ApiTokens[API Token Module]
@@ -51,6 +61,7 @@ flowchart TB
     end
 
     Query -->|REST /api/v1| Auth
+    MobileClient -->|REST /api/v1| Auth
     ApiTokens --> PG
     Channels --> PG
     Posts --> PG
