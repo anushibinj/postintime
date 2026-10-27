@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../widgets/toast.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -14,7 +13,6 @@ class PostInTimeApp extends ConsumerWidget {
       title: 'PostInTime',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: ref.watch(routerProvider),
     );
   }

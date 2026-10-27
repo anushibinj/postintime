@@ -14,8 +14,7 @@ import '../features/social_accounts/social_accounts_page.dart';
 import '../logic/post_list_params.dart';
 import '../state/auth_controller.dart';
 import 'app_shell.dart';
-
-final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+import 'navigator_keys.dart';
 
 bool _isAuthPath(String path) => path == '/login' || path == '/register';
 
