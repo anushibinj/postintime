@@ -19,7 +19,11 @@ class FakeBackendAdapter implements HttpClientAdapter {
     if (data is String && data.isNotEmpty) {
       body = jsonDecode(data);
     } else if (data is FormData) {
-      body = {for (final field in data.fields) field.key: field.value};
+      body = {
+        for (final field in data.fields) field.key: field.value,
+        // Uploaded files, as "field:filename:contentType".
+        '_files': [for (final file in data.files) '${file.key}:${file.value.filename}:${file.value.contentType}'],
+      };
     }
     final (status, payload) = backend.handle(options.method, options.uri, body);
     return ResponseBody.fromString(

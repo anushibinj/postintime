@@ -62,14 +62,14 @@ Future<TestApp> createApp({FakeBackend? backend, bool signedIn = true}) async {
 }
 
 /// Pumps the whole app against [app] and waits for the first screen.
-Future<void> pumpApp(WidgetTester tester, TestApp app) async {
+Future<void> pumpApp(WidgetTester tester, TestApp app, {List<Override> extra = const []}) async {
   usePhoneScreen(tester);
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
       retry: (_, _) => null,
-      overrides: testOverrides(app, prefs),
+      overrides: [...testOverrides(app, prefs), ...extra],
       child: const PostInTimeApp(),
     ),
   );
