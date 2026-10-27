@@ -87,6 +87,20 @@ void main() {
     expect(submitted!.$2, ['a1']);
   });
 
+  testWidgets('the interval labels sit under their slider stops', (tester) async {
+    await pumpSheet(tester, accounts: [account(id: 'a1')]);
+
+    // The track is inset by 24 on both sides; stops are evenly spaced between those insets.
+    final slider = tester.getRect(find.byType(Slider));
+    final first = slider.left + 24;
+    final last = slider.right - 24;
+    final step = (last - first) / 5;
+    for (var i = 0; i < 6; i++) {
+      final label = '${5 + i * 5}m';
+      expect(tester.getCenter(find.text(label)).dx, closeTo(first + i * step, 0.5), reason: label);
+    }
+  });
+
   testWidgets('queues new posts behind the posts already waiting', (tester) async {
     await pumpSheet(
       tester,
