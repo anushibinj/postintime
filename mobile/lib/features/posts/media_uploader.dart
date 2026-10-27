@@ -45,6 +45,7 @@ class _MediaUploaderState extends ConsumerState<MediaUploader> {
     }
     return showModalBottomSheet<ImageSource>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

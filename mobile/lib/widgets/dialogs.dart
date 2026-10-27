@@ -48,6 +48,7 @@ Future<T?> showFormSheet<T>(BuildContext context, {required WidgetBuilder builde
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    useRootNavigator: true,
     builder: builder,
   );
 }
