@@ -12,7 +12,7 @@ import '../test/support/fake_backend.dart';
 
 Future<void> main(List<String> args) async {
   final port = args.isNotEmpty ? int.parse(args.first) : 8080;
-  final backend = FakeBackend();
+  final backend = FakeBackend()..mediaBaseUrl = 'http://localhost:$port';
   _seed(backend, 'http://localhost:$port');
 
   final server = await HttpServer.bind(InternetAddress.anyIPv4, port);
@@ -34,11 +34,17 @@ Future<void> main(List<String> args) async {
     }
     final contentType = request.headers.contentType?.mimeType ?? '';
     Object? body;
-    final raw = await utf8.decoder.bind(request).join();
-    if (contentType == 'application/json' && raw.isNotEmpty) {
-      body = jsonDecode(raw);
+    if (contentType == 'application/json') {
+      final raw = await utf8.decoder.bind(request).join();
+      if (raw.isNotEmpty) {
+        body = jsonDecode(raw);
+      }
+    } else {
+      // Uploads (multipart) are not parsed; the fake just records that a file arrived.
+      await request.drain<void>();
     }
     final (status, payload) = backend.handle(request.method, request.uri, body);
+    stdout.writeln('${request.method} $path -> $status');
     request.response
       ..statusCode = status
       ..headers.contentType = ContentType.json;

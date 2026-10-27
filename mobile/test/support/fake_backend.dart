@@ -24,6 +24,9 @@ class FakeBackend {
   /// Bodies of the requests, parallel to [log].
   final List<Object?> bodies = [];
 
+  /// Origin put in front of uploaded media URLs (the mock server sets it to its own address).
+  String mediaBaseUrl = 'http://fake.test';
+
   /// Webhook publishing outcome; set to a message to make webhook publishing fail.
   String? webhookFailure;
 
@@ -460,7 +463,7 @@ class FakeBackend {
       final id = nextId('media');
       final media = {
         'id': id,
-        'url': 'http://fake.test/api/v1/media/files/$id.png',
+        'url': '$mediaBaseUrl/api/v1/media/files/$id.png',
         'contentType': 'image/png',
         'originalFilename': '$id.png',
       };
