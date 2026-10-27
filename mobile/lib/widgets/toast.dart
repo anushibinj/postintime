@@ -12,7 +12,8 @@ import '../app/theme.dart';
 class Toast {
   const Toast._();
 
-  static OverlayEntry? _current;
+  /// Closes the toast on screen, if any.
+  static VoidCallback? _closeCurrent;
 
   static void success(String message) => _show(message, AppColors.success, Icons.check_circle);
   static void error(String message) => _show(message, AppColors.danger, Icons.error);
@@ -24,34 +25,29 @@ class Toast {
     if (overlay == null) {
       return;
     }
-    _dismiss();
-    late final OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (context) => _ToastView(
-        key: ValueKey(message),
-        message: message,
-        color: color,
-        icon: icon,
-        onDone: () {
-          if (_current == entry) {
-            _current = null;
-          }
-          entry.remove();
-          entry.dispose();
-        },
-      ),
-    );
-    _current = entry;
-    overlay.insert(entry);
-  }
+    _closeCurrent?.call();
 
-  static void _dismiss() {
-    final current = _current;
-    _current = null;
-    if (current != null && current.mounted) {
-      current.remove();
-      current.dispose();
+    late final OverlayEntry entry;
+    var closed = false;
+    // Both the next toast and this toast's own timer can close it; only the first one may.
+    void close() {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      if (_closeCurrent == close) {
+        _closeCurrent = null;
+      }
+      entry.remove();
+      entry.dispose();
     }
+
+    entry = OverlayEntry(
+      builder: (context) =>
+          _ToastView(key: ValueKey(message), message: message, color: color, icon: icon, onDone: close),
+    );
+    _closeCurrent = close;
+    overlay.insert(entry);
   }
 }
 
