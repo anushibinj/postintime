@@ -38,6 +38,19 @@ void main() {
     expect(find.text('1-2 of 2 posts'), findsOneWidget);
   });
 
+  testWidgets('each post row is one named button for screen readers', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await openChannel(tester, seed: (backend, channelId) {
+      backend.addPost(channelId, title: 'First post', caption: 'Old caption');
+    });
+
+    // The row announces its title and caption together, instead of an unnamed button.
+    final row = find.bySemanticsLabel(RegExp(r'First post\s+Old caption'));
+    expect(row, findsOneWidget);
+    expect(tester.getSemantics(row).flagsCollection.isButton, isTrue);
+    semantics.dispose();
+  });
+
   testWidgets('shows an empty state when the channel has no posts', (tester) async {
     await openChannel(tester);
     expect(find.text('No posts yet'), findsOneWidget);
