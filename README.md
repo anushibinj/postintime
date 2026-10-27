@@ -5,6 +5,7 @@ Channel-centric content management and social publishing application.
 ## Stack
 
 - **Frontend:** React, TypeScript, Vite, TanStack Query, Ant Design
+- **Mobile:** Flutter (Android and iOS), Riverpod, go_router — see [mobile/README.md](./mobile/README.md)
 - **Backend:** Spring Boot 3, Java 21, PostgreSQL, Flyway
 - **Storage:** MinIO (local) / S3-compatible object storage
 
@@ -62,6 +63,21 @@ pnpm dev
 
 App: `http://localhost:5173`.
 
+### Mobile app (optional)
+
+The Flutter client in [`mobile/`](./mobile) offers everything the web app does on a phone. It needs the
+[Flutter SDK](https://docs.flutter.dev/get-started/install) and an API it can reach:
+
+```bash
+cd mobile
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://<your-computer>:8080
+```
+
+On a real phone use your computer's LAN address, and set `APPLICATION_ROOT_URL` to the same address so
+image links work. `dart run tool/mock_server.dart` starts a small mock API with sample data if you only
+want to look around. See [mobile/README.md](./mobile/README.md) for details.
+
 ## Development
 
 See [PRD.md](./PRD.md) for full product specification.
@@ -74,6 +90,9 @@ cd backend && mvn clean test
 
 # Frontend
 cd frontend && pnpm lint && pnpm build
+
+# Mobile (Flutter)
+cd mobile && flutter analyze && flutter test
 ```
 
 ## Architecture
