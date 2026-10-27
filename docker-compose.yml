@@ -46,7 +46,7 @@ services:
       DATABASE_USERNAME: ${DATABASE_USERNAME:-app}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-change-me}
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-secure-random-string-at-least-256-bits}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-2592000000}
       STORAGE_ENDPOINT: http://minio:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
