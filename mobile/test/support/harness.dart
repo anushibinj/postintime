@@ -113,3 +113,9 @@ Future<void> scrollTo(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(finder, 300, scrollable: find.byType(Scrollable).first);
   await tester.pumpAndSettle();
 }
+
+/// Scrolls the page's list back to its top.
+Future<void> scrollToTop(WidgetTester tester) async {
+  await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
+  await tester.pumpAndSettle();
+}
