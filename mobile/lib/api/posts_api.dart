@@ -12,12 +12,12 @@ class PostFilters {
   final String? sort;
 
   Map<String, dynamic> toQuery() => {
-        if (page != null) 'page': page.toString(),
-        if (size != null) 'size': size.toString(),
-        if (search != null && search!.isNotEmpty) 'search': search,
-        if (status != null) 'status': status!.name,
-        if (sort != null && sort!.isNotEmpty) 'sort': sort,
-      };
+    if (page != null) 'page': page.toString(),
+    if (size != null) 'size': size.toString(),
+    if (search != null && search!.isNotEmpty) 'search': search,
+    if (status != null) 'status': status!.name,
+    if (sort != null && sort!.isNotEmpty) 'sort': sort,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -38,7 +38,8 @@ class PostsApi {
   final ApiClient _client;
 
   Future<PageResponse<Post>> fetchPosts(String channelId, [PostFilters filters = const PostFilters()]) async {
-    final json = await _client.get('/api/v1/channels/$channelId/posts', query: filters.toQuery()) as Map<String, dynamic>;
+    final json =
+        await _client.get('/api/v1/channels/$channelId/posts', query: filters.toQuery()) as Map<String, dynamic>;
     return PageResponse.fromJson(json, Post.fromJson);
   }
 
@@ -54,12 +55,10 @@ class PostsApi {
     String? mediaId,
     required PostStatus status,
   }) async {
-    final json = await _client.post('/api/v1/channels/$channelId/posts', body: {
-      'title': title,
-      'caption': ?caption,
-      'mediaId': ?mediaId,
-      'status': status.name,
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      '/api/v1/channels/$channelId/posts',
+      body: {'title': title, 'caption': ?caption, 'mediaId': ?mediaId, 'status': status.name},
+    ) as Map<String, dynamic>;
     return Post.fromJson(json);
   }
 
@@ -71,12 +70,10 @@ class PostsApi {
     String? mediaId,
     PostStatus? status,
   }) async {
-    final json = await _client.patch('/api/v1/channels/$channelId/posts/$postId', body: {
-      'title': ?title,
-      'caption': ?caption,
-      'mediaId': ?mediaId,
-      if (status != null) 'status': status.name,
-    }) as Map<String, dynamic>;
+    final json = await _client.patch(
+      '/api/v1/channels/$channelId/posts/$postId',
+      body: {'title': ?title, 'caption': ?caption, 'mediaId': ?mediaId, if (status != null) 'status': status.name},
+    ) as Map<String, dynamic>;
     return Post.fromJson(json);
   }
 

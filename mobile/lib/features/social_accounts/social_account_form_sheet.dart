@@ -99,7 +99,9 @@ class _SocialAccountFormSheetState extends ConsumerState<SocialAccountFormSheet>
             DropdownButtonFormField<Platform>(
               initialValue: _platform,
               decoration: const InputDecoration(labelText: 'Platform'),
-              items: [for (final platform in Platform.values) DropdownMenuItem(value: platform, child: Text(platform.label))],
+              items: [
+                for (final platform in Platform.values) DropdownMenuItem(value: platform, child: Text(platform.label)),
+              ],
               onChanged: _editing ? null : (value) => setState(() => _platform = value),
               validator: (value) => value == null ? 'Platform is required' : null,
             ),

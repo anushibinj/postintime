@@ -53,7 +53,8 @@ class _MediaUploaderState extends ConsumerState<MediaUploader> {
 
   Future<ImageSource?> _chooseSource() {
     // Desktop and web have no camera to offer.
-    final hasCamera = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+    final hasCamera =
+        !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
     if (!hasCamera) {
       return Future.value(ImageSource.gallery);
     }
@@ -92,7 +93,9 @@ class _MediaUploaderState extends ConsumerState<MediaUploader> {
         return;
       }
       final contentType = _contentTypeFor(file);
-      final media = await ref.read(mediaApiProvider).uploadMedia(
+      final media = await ref
+          .read(mediaApiProvider)
+          .uploadMedia(
             bytes: await file.readAsBytes(),
             filename: _filenameFor(file, contentType),
             contentType: contentType,
@@ -144,7 +147,10 @@ class _MediaUploaderState extends ConsumerState<MediaUploader> {
         Stack(
           alignment: Alignment.center,
           children: [
-            Opacity(opacity: _uploading ? 0.45 : 1, child: PostImage(url: url, label: 'Preview')),
+            Opacity(
+              opacity: _uploading ? 0.45 : 1,
+              child: PostImage(url: url, label: 'Preview'),
+            ),
             if (_uploading)
               const Column(
                 mainAxisSize: MainAxisSize.min,
@@ -199,9 +205,8 @@ class PostImage extends StatelessWidget {
         url,
         semanticLabel: label,
         fit: BoxFit.contain,
-        loadingBuilder: (context, child, progress) => progress == null
-            ? child
-            : const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
         errorBuilder: (context, error, stack) => const SizedBox(
           height: 200,
           child: Center(child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.disabledText)),

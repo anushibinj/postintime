@@ -57,10 +57,7 @@ class _CollapsePanelState extends State<CollapsePanel> {
               ],
             ),
           ),
-          if (_expanded) ...[
-            const Divider(),
-            Padding(padding: const EdgeInsets.all(12), child: widget.body),
-          ],
+          if (_expanded) ...[const Divider(), Padding(padding: const EdgeInsets.all(12), child: widget.body)],
         ],
       ),
     );

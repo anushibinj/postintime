@@ -121,10 +121,7 @@ class PostDetailPage extends ConsumerWidget {
                       children: [
                         const Text('Title', style: AppText.secondary),
                         const SizedBox(height: 8),
-                        SelectableText(
-                          post.title,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                        ),
+                        SelectableText(post.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -170,7 +167,8 @@ class PostDetailPage extends ConsumerWidget {
                           AppAlert(
                             type: AlertType.info,
                             title: 'Queued for bulk posting at ${formatQueuedAt(queuedAt, now)}',
-                            description: 'The bulk posting queue will publish this post. Remove it from the queue '
+                            description:
+                                'The bulk posting queue will publish this post. Remove it from the queue '
                                 'on the channel page to post it individually.',
                           ),
                           const SizedBox(height: 16),

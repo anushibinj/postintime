@@ -18,7 +18,5 @@ int normalizeInterval(num value) {
 
 /// Every slider step with its label, e.g. `{5: '5m', 10: '10m', ...}`.
 Map<int, String> intervalMarks() {
-  return {
-    for (var value = bulkIntervalMin; value <= bulkIntervalMax; value += bulkIntervalStep) value: '${value}m',
-  };
+  return {for (var value = bulkIntervalMin; value <= bulkIntervalMax; value += bulkIntervalStep) value: '${value}m'};
 }

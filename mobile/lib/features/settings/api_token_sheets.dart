@@ -70,7 +70,9 @@ class _CreateApiTokenSheetState extends ConsumerState<CreateApiTokenSheet> {
             DropdownButtonFormField<String>(
               initialValue: _expiry,
               decoration: const InputDecoration(labelText: 'Expiry'),
-              items: [for (final option in expiryOptions) DropdownMenuItem(value: option.value, child: Text(option.label))],
+              items: [
+                for (final option in expiryOptions) DropdownMenuItem(value: option.value, child: Text(option.label)),
+              ],
               onChanged: (value) => setState(() => _expiry = value ?? 'never'),
             ),
           ],

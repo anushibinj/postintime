@@ -19,7 +19,10 @@ class SocialAccountsPage extends ConsumerWidget {
   final String channelId;
 
   void _openForm(BuildContext context, [SocialAccount? account]) {
-    showFormSheet<void>(context, builder: (_) => SocialAccountFormSheet(channelId: channelId, account: account));
+    showFormSheet<void>(
+      context,
+      builder: (_) => SocialAccountFormSheet(channelId: channelId, account: account),
+    );
   }
 
   Future<void> _toggleEnabled(WidgetRef ref, SocialAccount account) async {

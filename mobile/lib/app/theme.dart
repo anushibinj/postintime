@@ -21,11 +21,10 @@ class AppColors {
 const double kRadius = 8;
 
 ThemeData buildAppTheme() {
-  final scheme = ColorScheme.fromSeed(seedColor: AppColors.primary, surface: AppColors.surface).copyWith(
-    primary: AppColors.primary,
-    error: AppColors.danger,
-    surfaceContainerLowest: AppColors.background,
-  );
+  final scheme = ColorScheme.fromSeed(
+    seedColor: AppColors.primary,
+    surface: AppColors.surface,
+  ).copyWith(primary: AppColors.primary, error: AppColors.danger, surfaceContainerLowest: AppColors.background);
   final outline = OutlineInputBorder(
     borderRadius: BorderRadius.circular(kRadius),
     borderSide: const BorderSide(color: AppColors.dashedBorder),

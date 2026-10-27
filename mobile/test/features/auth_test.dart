@@ -21,7 +21,12 @@ void main() {
 
   testWidgets('wrong credentials show an error and keep the user signed out', (tester) async {
     final app = await createApp(signedIn: false);
-    app.backend.users['me@example.com'] = {'id': 'u1', 'email': 'me@example.com', 'password': 'right-pass', 'displayName': 'Me'};
+    app.backend.users['me@example.com'] = {
+      'id': 'u1',
+      'email': 'me@example.com',
+      'password': 'right-pass',
+      'displayName': 'Me',
+    };
     await pumpApp(tester, app);
 
     await enterField(tester, 'Email', 'me@example.com');
@@ -35,7 +40,12 @@ void main() {
 
   testWidgets('signing in opens the channels list and stores the session', (tester) async {
     final app = await createApp(signedIn: false);
-    app.backend.users['me@example.com'] = {'id': 'u1', 'email': 'me@example.com', 'password': 'right-pass', 'displayName': 'Me'};
+    app.backend.users['me@example.com'] = {
+      'id': 'u1',
+      'email': 'me@example.com',
+      'password': 'right-pass',
+      'displayName': 'Me',
+    };
     await pumpApp(tester, app);
 
     await enterField(tester, 'Email', 'me@example.com');
@@ -75,7 +85,12 @@ void main() {
 
   testWidgets('a taken email shows the registration error', (tester) async {
     final app = await createApp(signedIn: false);
-    app.backend.users['taken@example.com'] = {'id': 'u1', 'email': 'taken@example.com', 'password': 'x', 'displayName': 't'};
+    app.backend.users['taken@example.com'] = {
+      'id': 'u1',
+      'email': 'taken@example.com',
+      'password': 'x',
+      'displayName': 't',
+    };
     await pumpApp(tester, app);
 
     await tapText(tester, 'Register');

@@ -14,8 +14,8 @@ class PublishingApi {
   }
 
   Future<List<PostTarget>> createTargets(String channelId, String postId, List<String> socialAccountIds) async {
-    final json = await _client.post(_targets(channelId, postId), body: {'socialAccountIds': socialAccountIds})
-        as List<dynamic>;
+    final json =
+        await _client.post(_targets(channelId, postId), body: {'socialAccountIds': socialAccountIds}) as List<dynamic>;
     return json.whereType<Map<String, dynamic>>().map(PostTarget.fromJson).toList();
   }
 
@@ -25,10 +25,10 @@ class PublishingApi {
   }
 
   Future<PostTarget> markPublished(String channelId, String postId, String targetId, {String? externalUrl}) async {
-    final json = await _client.post('${_targets(channelId, postId)}/$targetId/mark-published', body: {
-      'externalUrl': ?externalUrl,
-      'notes': 'Published manually',
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      '${_targets(channelId, postId)}/$targetId/mark-published',
+      body: {'externalUrl': ?externalUrl, 'notes': 'Published manually'},
+    ) as Map<String, dynamic>;
     return PostTarget.fromJson(json);
   }
 
@@ -38,9 +38,10 @@ class PublishingApi {
   }
 
   Future<PostTarget> togglePublished(String channelId, String postId, String socialAccountId) async {
-    final json = await _client.post('${_targets(channelId, postId)}/toggle', body: {
-      'socialAccountId': socialAccountId,
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      '${_targets(channelId, postId)}/toggle',
+      body: {'socialAccountId': socialAccountId},
+    ) as Map<String, dynamic>;
     return PostTarget.fromJson(json);
   }
 }

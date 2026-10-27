@@ -33,8 +33,7 @@ enum Platform {
   const Platform(this.label);
   final String label;
 
-  static Platform parse(String? value) =>
-      Platform.values.firstWhere((p) => p.name == value, orElse: () => Platform.x);
+  static Platform parse(String? value) => Platform.values.firstWhere((p) => p.name == value, orElse: () => Platform.x);
 }
 
 enum PostingMode {

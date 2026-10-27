@@ -14,14 +14,14 @@ Future<TestApp> openSettings(WidgetTester tester, {void Function(TestApp app)? s
 }
 
 Map<String, dynamic> token(String id, String name, {String? expiresAt, String? lastUsedAt}) => {
-      'id': id,
-      'name': name,
-      'tokenPrefix': 'pit_$id',
-      'secret': 'pit_full_secret_$id',
-      'expiresAt': expiresAt,
-      'lastUsedAt': lastUsedAt,
-      'createdAt': '2026-01-01T00:00:00Z',
-    };
+  'id': id,
+  'name': name,
+  'tokenPrefix': 'pit_$id',
+  'secret': 'pit_full_secret_$id',
+  'expiresAt': expiresAt,
+  'lastUsedAt': lastUsedAt,
+  'createdAt': '2026-01-01T00:00:00Z',
+};
 
 void main() {
   testWidgets('shows the account email and an empty token list', (tester) async {
@@ -33,12 +33,15 @@ void main() {
   });
 
   testWidgets('lists tokens with prefix, expiry and last use', (tester) async {
-    await openSettings(tester, seed: (app) {
-      app.backend.apiTokens.addAll([
-        token('a1', 'CI pipeline', expiresAt: '2027-03-05T12:00:00Z', lastUsedAt: '2026-10-01T12:00:00Z'),
-        token('b2', 'Forever'),
-      ]);
-    });
+    await openSettings(
+      tester,
+      seed: (app) {
+        app.backend.apiTokens.addAll([
+          token('a1', 'CI pipeline', expiresAt: '2027-03-05T12:00:00Z', lastUsedAt: '2026-10-01T12:00:00Z'),
+          token('b2', 'Forever'),
+        ]);
+      },
+    );
 
     expect(find.text('CI pipeline'), findsOneWidget);
     expect(find.text('pit_a1…'), findsOneWidget);
@@ -70,7 +73,10 @@ void main() {
 
     expect(find.text('Copy your API token'), findsOneWidget);
     expect(find.text('This secret is shown only once. Store it somewhere safe.'), findsOneWidget);
-    expect(find.text('pit_secret_${app.backend.apiTokens.single['id'].toString().split('-').last}_xyz'), findsOneWidget);
+    expect(
+      find.text('pit_secret_${app.backend.apiTokens.single['id'].toString().split('-').last}_xyz'),
+      findsOneWidget,
+    );
     final created = app.backend.bodies[app.backend.log.indexOf('POST /api/v1/api-tokens')]! as Map;
     expect(created['name'], 'CI pipeline');
     final expires = DateTime.parse(created['expiresAt'] as String);
@@ -95,7 +101,10 @@ void main() {
   });
 
   testWidgets('changes a token expiry, including back to never', (tester) async {
-    final app = await openSettings(tester, seed: (app) => app.backend.apiTokens.add(token('a1', 'CI', expiresAt: '2027-03-05T12:00:00Z')));
+    final app = await openSettings(
+      tester,
+      seed: (app) => app.backend.apiTokens.add(token('a1', 'CI', expiresAt: '2027-03-05T12:00:00Z')),
+    );
 
     expect(find.text('Change expiry'), findsOneWidget);
     await tester.tap(find.byType(DropdownButtonFormField<String>));
@@ -120,7 +129,10 @@ void main() {
 
     await tapText(tester, 'Refresh secret');
     expect(find.text('Refresh this token?'), findsOneWidget);
-    expect(find.text('The current secret will stop working immediately. A new secret will be shown once.'), findsOneWidget);
+    expect(
+      find.text('The current secret will stop working immediately. A new secret will be shown once.'),
+      findsOneWidget,
+    );
     await tapText(tester, 'Cancel');
     expect(app.backend.log.where((e) => e.endsWith('/refresh')), isEmpty);
 

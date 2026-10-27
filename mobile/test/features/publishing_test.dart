@@ -12,7 +12,8 @@ Future<({TestApp app, String channelId, String postId})> openPost(
 }) async {
   final app = await createApp();
   final channelId = app.backend.addChannel(name: 'Tech', slug: 'tech')['id']! as String;
-  final postId = app.backend.addPost(channelId, title: 'Launch', caption: 'Big news!', status: 'ready')['id']! as String;
+  final postId =
+      app.backend.addPost(channelId, title: 'Launch', caption: 'Big news!', status: 'ready')['id']! as String;
   seed?.call(app.backend, channelId, postId);
   await pumpApp(tester, app);
   await tapText(tester, 'View');
@@ -47,11 +48,14 @@ void main() {
   });
 
   testWidgets('adds publishing targets from the enabled accounts only', (tester) async {
-    final opened = await openPost(tester, seed: (backend, channelId, postId) {
-      backend.addAccount(channelId, platform: 'linkedin', name: 'Work LinkedIn');
-      backend.addAccount(channelId, platform: 'x', name: 'Side X');
-      backend.addAccount(channelId, platform: 'facebook', name: 'Off page')['enabled'] = false;
-    });
+    final opened = await openPost(
+      tester,
+      seed: (backend, channelId, postId) {
+        backend.addAccount(channelId, platform: 'linkedin', name: 'Work LinkedIn');
+        backend.addAccount(channelId, platform: 'x', name: 'Side X');
+        backend.addAccount(channelId, platform: 'facebook', name: 'Off page')['enabled'] = false;
+      },
+    );
 
     await scrollTo(tester, find.text('Add Targets'));
     await tapText(tester, 'Add Targets');
@@ -74,10 +78,18 @@ void main() {
   });
 
   testWidgets('publishing to a webhook account finishes without further steps', (tester) async {
-    final opened = await openPost(tester, seed: (backend, channelId, postId) {
-      final account = backend.addAccount(channelId, platform: 'x', name: 'Hook X', mode: 'webhook');
-      backend.targets[postId]!.add({'id': 't1', 'socialAccountId': account['id'], 'status': 'pending', 'publishedAt': null});
-    });
+    final opened = await openPost(
+      tester,
+      seed: (backend, channelId, postId) {
+        final account = backend.addAccount(channelId, platform: 'x', name: 'Hook X', mode: 'webhook');
+        backend.targets[postId]!.add({
+          'id': 't1',
+          'socialAccountId': account['id'],
+          'status': 'pending',
+          'publishedAt': null,
+        });
+      },
+    );
 
     await scrollTo(tester, find.byTooltip('Publish'));
     await tester.tap(find.byTooltip('Publish'));
@@ -91,11 +103,19 @@ void main() {
   });
 
   testWidgets('a failed webhook is reported and the target shows as failed', (tester) async {
-    final opened = await openPost(tester, seed: (backend, channelId, postId) {
-      final account = backend.addAccount(channelId, platform: 'x', name: 'Hook X', mode: 'webhook');
-      backend.targets[postId]!.add({'id': 't1', 'socialAccountId': account['id'], 'status': 'pending', 'publishedAt': null});
-      backend.webhookFailure = 'Webhook responded 502';
-    });
+    final opened = await openPost(
+      tester,
+      seed: (backend, channelId, postId) {
+        final account = backend.addAccount(channelId, platform: 'x', name: 'Hook X', mode: 'webhook');
+        backend.targets[postId]!.add({
+          'id': 't1',
+          'socialAccountId': account['id'],
+          'status': 'pending',
+          'publishedAt': null,
+        });
+        backend.webhookFailure = 'Webhook responded 502';
+      },
+    );
 
     await scrollTo(tester, find.byTooltip('Publish'));
     await tester.tap(find.byTooltip('Publish'));
@@ -118,10 +138,23 @@ void main() {
     });
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
 
-    final opened = await openPost(tester, seed: (backend, channelId, postId) {
-      final account = backend.addAccount(channelId, platform: 'instagram', name: 'Insta', profileUrl: 'https://instagram.com/me');
-      backend.targets[postId]!.add({'id': 't1', 'socialAccountId': account['id'], 'status': 'pending', 'publishedAt': null});
-    });
+    final opened = await openPost(
+      tester,
+      seed: (backend, channelId, postId) {
+        final account = backend.addAccount(
+          channelId,
+          platform: 'instagram',
+          name: 'Insta',
+          profileUrl: 'https://instagram.com/me',
+        );
+        backend.targets[postId]!.add({
+          'id': 't1',
+          'socialAccountId': account['id'],
+          'status': 'pending',
+          'publishedAt': null,
+        });
+      },
+    );
 
     await scrollTo(tester, find.byTooltip('Publish'));
     await tester.tap(find.byTooltip('Publish'));
@@ -149,35 +182,48 @@ void main() {
   });
 
   testWidgets('a post in the bulk queue cannot be published individually', (tester) async {
-    await openPost(tester, seed: (backend, channelId, postId) {
-      final account = backend.addAccount(channelId, platform: 'x', name: 'Hook X', mode: 'webhook');
-      backend.targets[postId]!.add({'id': 't1', 'socialAccountId': account['id'], 'status': 'pending', 'publishedAt': null});
-      backend.jobs[channelId]!.add({
-        'id': 'job1',
-        'channelId': channelId,
-        'intervalMinutes': 5,
-        'status': 'running',
-        'totalItems': 1,
-        'processedItems': 0,
-        'failedItems': 0,
-        'socialAccountIds': [account['id']],
-        'createdAt': testNow.toIso8601String(),
-        'updatedAt': testNow.toIso8601String(),
-        'items': [
-          {
-            'id': 'item1',
-            'postId': postId,
-            'postTitle': 'Launch',
-            'position': 0,
-            'status': 'pending',
-            'scheduledAt': testNow.add(const Duration(minutes: 12)).toUtc().toIso8601String(),
-          },
-        ],
-      });
-    });
+    await openPost(
+      tester,
+      seed: (backend, channelId, postId) {
+        final account = backend.addAccount(channelId, platform: 'x', name: 'Hook X', mode: 'webhook');
+        backend.targets[postId]!.add({
+          'id': 't1',
+          'socialAccountId': account['id'],
+          'status': 'pending',
+          'publishedAt': null,
+        });
+        backend.jobs[channelId]!.add({
+          'id': 'job1',
+          'channelId': channelId,
+          'intervalMinutes': 5,
+          'status': 'running',
+          'totalItems': 1,
+          'processedItems': 0,
+          'failedItems': 0,
+          'socialAccountIds': [account['id']],
+          'createdAt': testNow.toIso8601String(),
+          'updatedAt': testNow.toIso8601String(),
+          'items': [
+            {
+              'id': 'item1',
+              'postId': postId,
+              'postTitle': 'Launch',
+              'position': 0,
+              'status': 'pending',
+              'scheduledAt': testNow.add(const Duration(minutes: 12)).toUtc().toIso8601String(),
+            },
+          ],
+        });
+      },
+    );
 
     await scrollTo(tester, find.textContaining('Queued for bulk posting at 3:12 PM (in 12 min)'));
-    expect(find.text('The bulk posting queue will publish this post. Remove it from the queue on the channel page to post it individually.'), findsOneWidget);
+    expect(
+      find.text(
+        'The bulk posting queue will publish this post. Remove it from the queue on the channel page to post it individually.',
+      ),
+      findsOneWidget,
+    );
     expect(find.byTooltip('Publish'), findsNothing);
   });
 }

@@ -17,11 +17,10 @@ class ChannelsApi {
   }
 
   Future<Channel> createChannel({required String name, required String slug, String? description}) async {
-    final json = await _client.post('/api/v1/channels', body: {
-      'name': name,
-      'slug': slug,
-      'description': ?description,
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      '/api/v1/channels',
+      body: {'name': name, 'slug': slug, 'description': ?description},
+    ) as Map<String, dynamic>;
     return Channel.fromJson(json);
   }
 
@@ -32,12 +31,10 @@ class ChannelsApi {
     String? description,
     bool? enabled,
   }) async {
-    final json = await _client.patch('/api/v1/channels/$channelId', body: {
-      'name': ?name,
-      'slug': ?slug,
-      'description': ?description,
-      'enabled': ?enabled,
-    }) as Map<String, dynamic>;
+    final json = await _client.patch(
+      '/api/v1/channels/$channelId',
+      body: {'name': ?name, 'slug': ?slug, 'description': ?description, 'enabled': ?enabled},
+    ) as Map<String, dynamic>;
     return Channel.fromJson(json);
   }
 

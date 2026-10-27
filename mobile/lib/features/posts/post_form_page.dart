@@ -88,17 +88,10 @@ class _PostFormPageState extends ConsumerState<PostFormPage> {
         );
         Toast.success('Post updated');
         if (mounted) {
-          context.canPop()
-              ? context.pop()
-              : context.go('/channels/${widget.channelId}/posts/${widget.postId}');
+          context.canPop() ? context.pop() : context.go('/channels/${widget.channelId}/posts/${widget.postId}');
         }
       } else {
-        final post = await actions.create(
-          title: title,
-          caption: _caption.text,
-          status: _status,
-          mediaId: _media?.id,
-        );
+        final post = await actions.create(title: title, caption: _caption.text, status: _status, mediaId: _media?.id);
         Toast.success('Post created');
         if (mounted) {
           context.pushReplacement('/channels/${widget.channelId}/posts/${post.id}');
@@ -116,9 +109,7 @@ class _PostFormPageState extends ConsumerState<PostFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final existing = _isEdit
-        ? ref.watch(postProvider((channelId: widget.channelId, postId: widget.postId!)))
-        : null;
+    final existing = _isEdit ? ref.watch(postProvider((channelId: widget.channelId, postId: widget.postId!))) : null;
     final canSave = _title.text.trim().isNotEmpty && !_saving;
 
     return Scaffold(
@@ -143,73 +134,73 @@ class _PostFormPageState extends ConsumerState<PostFormPage> {
               onRetry: () => ref.invalidate(postProvider((channelId: widget.channelId, postId: widget.postId!))),
             )
           : existing != null && !_loaded
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(
-                      _isEdit
-                          ? 'Update the image, caption, and status.'
-                          : 'Add media and write the caption you will publish.',
-                      style: AppText.secondary,
-                    ),
-                    const SizedBox(height: 16),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text('Image', style: TextStyle(fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 12),
-                            MediaUploader(value: _media, onChanged: (media) => setState(() => _media = media)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text('Title', style: AppText.secondary),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _title,
-                              maxLength: 200,
-                              textCapitalization: TextCapitalization.sentences,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                              decoration: const InputDecoration(hintText: 'What is this post about?'),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Caption', style: AppText.secondary),
-                                Text('${_caption.text.length} characters', style: AppText.secondary),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _caption,
-                              minLines: 8,
-                              maxLines: 16,
-                              keyboardType: TextInputType.multiline,
-                              textCapitalization: TextCapitalization.sentences,
-                              decoration: const InputDecoration(
-                                hintText: 'Write the caption you will copy to social accounts...',
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            PostStatusPicker(status: _status, onChanged: (value) => setState(() => _status = value)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  _isEdit
+                      ? 'Update the image, caption, and status.'
+                      : 'Add media and write the caption you will publish.',
+                  style: AppText.secondary,
                 ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('Image', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 12),
+                        MediaUploader(value: _media, onChanged: (media) => setState(() => _media = media)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('Title', style: AppText.secondary),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _title,
+                          maxLength: 200,
+                          textCapitalization: TextCapitalization.sentences,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          decoration: const InputDecoration(hintText: 'What is this post about?'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Caption', style: AppText.secondary),
+                            Text('${_caption.text.length} characters', style: AppText.secondary),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _caption,
+                          minLines: 8,
+                          maxLines: 16,
+                          keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: const InputDecoration(
+                            hintText: 'Write the caption you will copy to social accounts...',
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        PostStatusPicker(status: _status, onChanged: (value) => setState(() => _status = value)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

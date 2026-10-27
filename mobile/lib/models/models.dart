@@ -28,14 +28,14 @@ class ApiToken {
   final DateTime createdAt;
 
   factory ApiToken.fromJson(Map<String, dynamic> json) => ApiToken(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? '',
-        tokenPrefix: json['tokenPrefix'] as String? ?? '',
-        token: json['token'] as String?,
-        expiresAt: _date(json['expiresAt']),
-        lastUsedAt: _date(json['lastUsedAt']),
-        createdAt: _requiredDate(json['createdAt']),
-      );
+    id: json['id'] as String,
+    name: json['name'] as String? ?? '',
+    tokenPrefix: json['tokenPrefix'] as String? ?? '',
+    token: json['token'] as String?,
+    expiresAt: _date(json['expiresAt']),
+    lastUsedAt: _date(json['lastUsedAt']),
+    createdAt: _requiredDate(json['createdAt']),
+  );
 }
 
 class Channel {
@@ -62,16 +62,16 @@ class Channel {
   final DateTime updatedAt;
 
   factory Channel.fromJson(Map<String, dynamic> json) => Channel(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? '',
-        slug: json['slug'] as String? ?? '',
-        description: json['description'] as String?,
-        enabled: json['enabled'] as bool? ?? true,
-        postCount: (json['postCount'] as num?)?.toInt() ?? 0,
-        socialAccountCount: (json['socialAccountCount'] as num?)?.toInt() ?? 0,
-        createdAt: _requiredDate(json['createdAt']),
-        updatedAt: _requiredDate(json['updatedAt']),
-      );
+    id: json['id'] as String,
+    name: json['name'] as String? ?? '',
+    slug: json['slug'] as String? ?? '',
+    description: json['description'] as String?,
+    enabled: json['enabled'] as bool? ?? true,
+    postCount: (json['postCount'] as num?)?.toInt() ?? 0,
+    socialAccountCount: (json['socialAccountCount'] as num?)?.toInt() ?? 0,
+    createdAt: _requiredDate(json['createdAt']),
+    updatedAt: _requiredDate(json['updatedAt']),
+  );
 }
 
 class MediaInfo {
@@ -94,23 +94,18 @@ class MediaInfo {
   final int? height;
 
   factory MediaInfo.fromJson(Map<String, dynamic> json) => MediaInfo(
-        id: json['id'] as String,
-        url: json['url'] as String? ?? '',
-        contentType: json['contentType'] as String? ?? '',
-        originalFilename: json['originalFilename'] as String?,
-        sizeBytes: (json['sizeBytes'] as num?)?.toInt(),
-        width: (json['width'] as num?)?.toInt(),
-        height: (json['height'] as num?)?.toInt(),
-      );
+    id: json['id'] as String,
+    url: json['url'] as String? ?? '',
+    contentType: json['contentType'] as String? ?? '',
+    originalFilename: json['originalFilename'] as String?,
+    sizeBytes: (json['sizeBytes'] as num?)?.toInt(),
+    width: (json['width'] as num?)?.toInt(),
+    height: (json['height'] as num?)?.toInt(),
+  );
 }
 
 class PublicationSummary {
-  const PublicationSummary({
-    required this.total,
-    required this.published,
-    required this.pending,
-    required this.failed,
-  });
+  const PublicationSummary({required this.total, required this.published, required this.pending, required this.failed});
 
   final int total;
   final int published;
@@ -118,11 +113,11 @@ class PublicationSummary {
   final int failed;
 
   factory PublicationSummary.fromJson(Map<String, dynamic> json) => PublicationSummary(
-        total: (json['total'] as num?)?.toInt() ?? 0,
-        published: (json['published'] as num?)?.toInt() ?? 0,
-        pending: (json['pending'] as num?)?.toInt() ?? 0,
-        failed: (json['failed'] as num?)?.toInt() ?? 0,
-      );
+    total: (json['total'] as num?)?.toInt() ?? 0,
+    published: (json['published'] as num?)?.toInt() ?? 0,
+    pending: (json['pending'] as num?)?.toInt() ?? 0,
+    failed: (json['failed'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class PostTargetSummary {
@@ -141,12 +136,12 @@ class PostTargetSummary {
   final TargetStatus status;
 
   factory PostTargetSummary.fromJson(Map<String, dynamic> json) => PostTargetSummary(
-        id: json['id'] as String,
-        socialAccountId: json['socialAccountId'] as String? ?? '',
-        platform: Platform.parse(json['platform'] as String?),
-        name: json['name'] as String? ?? '',
-        status: TargetStatus.parse(json['status'] as String?),
-      );
+    id: json['id'] as String,
+    socialAccountId: json['socialAccountId'] as String? ?? '',
+    platform: Platform.parse(json['platform'] as String?),
+    name: json['name'] as String? ?? '',
+    status: TargetStatus.parse(json['status'] as String?),
+  );
 }
 
 class Post {
@@ -265,19 +260,19 @@ class SocialAccount {
   bool get isWebhook => postingMode == PostingMode.webhook;
 
   factory SocialAccount.fromJson(Map<String, dynamic> json) => SocialAccount(
-        id: json['id'] as String,
-        platform: Platform.parse(json['platform'] as String?),
-        name: json['name'] as String? ?? '',
-        profileUrl: json['profileUrl'] as String?,
-        postingMode: PostingMode.parse(json['postingMode'] as String?),
-        enabled: json['enabled'] as bool? ?? true,
-        webhookUrl: json['webhookUrl'] as String?,
-        webhookAuthType: WebhookAuthType.parse(json['webhookAuthType'] as String?),
-        webhookUsername: json['webhookUsername'] as String?,
-        webhookHasPassword: json['webhookHasPassword'] as bool? ?? false,
-        createdAt: _requiredDate(json['createdAt']),
-        updatedAt: _requiredDate(json['updatedAt']),
-      );
+    id: json['id'] as String,
+    platform: Platform.parse(json['platform'] as String?),
+    name: json['name'] as String? ?? '',
+    profileUrl: json['profileUrl'] as String?,
+    postingMode: PostingMode.parse(json['postingMode'] as String?),
+    enabled: json['enabled'] as bool? ?? true,
+    webhookUrl: json['webhookUrl'] as String?,
+    webhookAuthType: WebhookAuthType.parse(json['webhookAuthType'] as String?),
+    webhookUsername: json['webhookUsername'] as String?,
+    webhookHasPassword: json['webhookHasPassword'] as bool? ?? false,
+    createdAt: _requiredDate(json['createdAt']),
+    updatedAt: _requiredDate(json['updatedAt']),
+  );
 }
 
 class TargetAccount {
@@ -289,11 +284,11 @@ class TargetAccount {
   final String? profileUrl;
 
   factory TargetAccount.fromJson(Map<String, dynamic> json) => TargetAccount(
-        id: json['id'] as String,
-        platform: Platform.parse(json['platform'] as String?),
-        name: json['name'] as String? ?? '',
-        profileUrl: json['profileUrl'] as String?,
-      );
+    id: json['id'] as String,
+    platform: Platform.parse(json['platform'] as String?),
+    name: json['name'] as String? ?? '',
+    profileUrl: json['profileUrl'] as String?,
+  );
 }
 
 class PostTarget {
@@ -316,14 +311,14 @@ class PostTarget {
   final String? externalUrl;
 
   factory PostTarget.fromJson(Map<String, dynamic> json) => PostTarget(
-        id: json['id'] as String,
-        socialAccount: TargetAccount.fromJson(json['socialAccount'] as Map<String, dynamic>),
-        status: TargetStatus.parse(json['status'] as String?),
-        publishingMode: PostingMode.parse(json['publishingMode'] as String?),
-        publishedAt: _date(json['publishedAt']),
-        externalPostId: json['externalPostId'] as String?,
-        externalUrl: json['externalUrl'] as String?,
-      );
+    id: json['id'] as String,
+    socialAccount: TargetAccount.fromJson(json['socialAccount'] as Map<String, dynamic>),
+    status: TargetStatus.parse(json['status'] as String?),
+    publishingMode: PostingMode.parse(json['publishingMode'] as String?),
+    publishedAt: _date(json['publishedAt']),
+    externalPostId: json['externalPostId'] as String?,
+    externalUrl: json['externalUrl'] as String?,
+  );
 }
 
 class PublishInstructions {
@@ -334,10 +329,10 @@ class PublishInstructions {
   final String? destinationUrl;
 
   factory PublishInstructions.fromJson(Map<String, dynamic> json) => PublishInstructions(
-        copyCaption: json['copyCaption'] as bool? ?? false,
-        downloadMedia: json['downloadMedia'] as bool? ?? false,
-        destinationUrl: json['destinationUrl'] as String?,
-      );
+    copyCaption: json['copyCaption'] as bool? ?? false,
+    downloadMedia: json['downloadMedia'] as bool? ?? false,
+    destinationUrl: json['destinationUrl'] as String?,
+  );
 }
 
 class PublishResponse {
@@ -388,15 +383,15 @@ class BulkPublishItem {
   final DateTime? processedAt;
 
   factory BulkPublishItem.fromJson(Map<String, dynamic> json) => BulkPublishItem(
-        id: json['id'] as String,
-        postId: json['postId'] as String? ?? '',
-        postTitle: json['postTitle'] as String? ?? '',
-        position: (json['position'] as num?)?.toInt() ?? 0,
-        status: BulkPublishItemStatus.parse(json['status'] as String?),
-        scheduledAt: _requiredDate(json['scheduledAt']),
-        errorMessage: json['errorMessage'] as String?,
-        processedAt: _date(json['processedAt']),
-      );
+    id: json['id'] as String,
+    postId: json['postId'] as String? ?? '',
+    postTitle: json['postTitle'] as String? ?? '',
+    position: (json['position'] as num?)?.toInt() ?? 0,
+    status: BulkPublishItemStatus.parse(json['status'] as String?),
+    scheduledAt: _requiredDate(json['scheduledAt']),
+    errorMessage: json['errorMessage'] as String?,
+    processedAt: _date(json['processedAt']),
+  );
 }
 
 class BulkPublishJob {
@@ -462,9 +457,9 @@ class AuthUser {
   final String displayName;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-        token: json['token'] as String,
-        userId: json['userId'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        displayName: json['displayName'] as String? ?? '',
-      );
+    token: json['token'] as String,
+    userId: json['userId'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    displayName: json['displayName'] as String? ?? '',
+  );
 }

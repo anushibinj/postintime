@@ -49,7 +49,9 @@ void main() {
 
     await tapText(tester, 'Edit');
     expect(find.text('Edit Channel'), findsOneWidget);
-    final slug = tester.widget<TextField>(find.descendant(of: find.widgetWithText(TextFormField, 'Slug'), matching: find.byType(TextField)));
+    final slug = tester.widget<TextField>(
+      find.descendant(of: find.widgetWithText(TextFormField, 'Slug'), matching: find.byType(TextField)),
+    );
     expect(slug.enabled, isFalse);
 
     await enterField(tester, 'Name', 'Tech daily');

@@ -7,7 +7,10 @@ import '../support/harness.dart';
 
 final platformDropdown = find.byType(DropdownButtonFormField<Platform>);
 
-Future<({TestApp app, String channelId})> openAccounts(WidgetTester tester, {void Function(TestApp app, String channelId)? seed}) async {
+Future<({TestApp app, String channelId})> openAccounts(
+  WidgetTester tester, {
+  void Function(TestApp app, String channelId)? seed,
+}) async {
   final app = await createApp();
   final channelId = app.backend.addChannel(name: 'Tech', slug: 'tech')['id']! as String;
   seed?.call(app, channelId);
@@ -19,12 +22,21 @@ Future<({TestApp app, String channelId})> openAccounts(WidgetTester tester, {voi
 
 void main() {
   testWidgets('lists accounts with their mode, auth and state', (tester) async {
-    await openAccounts(tester, seed: (app, channelId) {
-      app.backend.addAccount(channelId, platform: 'linkedin', name: 'Work', profileUrl: 'https://linkedin.com/in/me');
-      final hook = app.backend.addAccount(channelId, platform: 'x', name: 'Hook', mode: 'webhook', webhookUrl: 'https://n8n.test/hook');
-      hook['webhookAuthType'] = 'basic';
-      hook['enabled'] = false;
-    });
+    await openAccounts(
+      tester,
+      seed: (app, channelId) {
+        app.backend.addAccount(channelId, platform: 'linkedin', name: 'Work', profileUrl: 'https://linkedin.com/in/me');
+        final hook = app.backend.addAccount(
+          channelId,
+          platform: 'x',
+          name: 'Hook',
+          mode: 'webhook',
+          webhookUrl: 'https://n8n.test/hook',
+        );
+        hook['webhookAuthType'] = 'basic';
+        hook['enabled'] = false;
+      },
+    );
 
     expect(find.text('Social Accounts'), findsOneWidget);
     expect(find.text('Work'), findsOneWidget);
@@ -106,12 +118,21 @@ void main() {
   });
 
   testWidgets('editing keeps the platform fixed and lets the stored password stay', (tester) async {
-    final opened = await openAccounts(tester, seed: (app, channelId) {
-      final hook = app.backend.addAccount(channelId, platform: 'x', name: 'Hook', mode: 'webhook', webhookUrl: 'https://n8n.test/hook');
-      hook['webhookAuthType'] = 'basic';
-      hook['webhookUsername'] = 'robot';
-      hook['webhookHasPassword'] = true;
-    });
+    final opened = await openAccounts(
+      tester,
+      seed: (app, channelId) {
+        final hook = app.backend.addAccount(
+          channelId,
+          platform: 'x',
+          name: 'Hook',
+          mode: 'webhook',
+          webhookUrl: 'https://n8n.test/hook',
+        );
+        hook['webhookAuthType'] = 'basic';
+        hook['webhookUsername'] = 'robot';
+        hook['webhookHasPassword'] = true;
+      },
+    );
 
     await tapText(tester, 'Edit');
     expect(find.text('Edit Account'), findsOneWidget);
@@ -133,9 +154,12 @@ void main() {
   });
 
   testWidgets('disables, re-enables and deletes an account', (tester) async {
-    final opened = await openAccounts(tester, seed: (app, channelId) {
-      app.backend.addAccount(channelId, platform: 'x', name: 'Side X');
-    });
+    final opened = await openAccounts(
+      tester,
+      seed: (app, channelId) {
+        app.backend.addAccount(channelId, platform: 'x', name: 'Side X');
+      },
+    );
 
     await tapText(tester, 'Disable');
     expect(find.text('Manual · Disabled'), findsOneWidget);

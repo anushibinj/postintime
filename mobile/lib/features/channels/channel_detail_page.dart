@@ -77,11 +77,8 @@ class _ChannelDetailPageState extends ConsumerState<ChannelDetailPage> {
     final posts = [for (final entry in _selected.entries) BulkPublishSelection(id: entry.key, title: entry.value)];
     showFormSheet<void>(
       context,
-      builder: (_) => _BulkSheetHost(
-        channelId: widget.channelId,
-        posts: posts,
-        onStarted: () => setState(_selected.clear),
-      ),
+      builder: (_) =>
+          _BulkSheetHost(channelId: widget.channelId, posts: posts, onStarted: () => setState(_selected.clear)),
     );
   }
 
@@ -128,7 +125,10 @@ class _ChannelDetailPageState extends ConsumerState<ChannelDetailPage> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(channel.description!, style: AppText.secondary),
                 ),
-              Text('${channel.postCount} posts · ${channel.socialAccountCount} social accounts', style: AppText.secondary),
+              Text(
+                '${channel.postCount} posts · ${channel.socialAccountCount} social accounts',
+                style: AppText.secondary,
+              ),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
@@ -170,8 +170,9 @@ class _ChannelDetailPageState extends ConsumerState<ChannelDetailPage> {
                             value: selectable.isNotEmpty && selectedOnPage == selectable.length
                                 ? true
                                 : (selectedOnPage > 0 ? null : false),
-                            onChanged:
-                                selectable.isEmpty ? null : (_) => _selectPage(selectable, selectedOnPage != selectable.length),
+                            onChanged: selectable.isEmpty
+                                ? null
+                                : (_) => _selectPage(selectable, selectedOnPage != selectable.length),
                           ),
                           const Text('Select page'),
                         ],
@@ -245,7 +246,9 @@ class _BulkSheetHostState extends ConsumerState<_BulkSheetHost> {
     setState(() => _submitting = true);
     final count = widget.posts.length;
     try {
-      await ref.read(bulkPublishActionsProvider(widget.channelId)).create(
+      await ref
+          .read(bulkPublishActionsProvider(widget.channelId))
+          .create(
             postIds: [for (final post in widget.posts) post.id],
             intervalMinutes: intervalMinutes,
             socialAccountIds: socialAccountIds,
@@ -272,8 +275,10 @@ class _BulkSheetHostState extends ConsumerState<_BulkSheetHost> {
       (count, job) =>
           count +
           job.items
-              .where((item) =>
-                  item.status == BulkPublishItemStatus.pending || item.status == BulkPublishItemStatus.publishing)
+              .where(
+                (item) =>
+                    item.status == BulkPublishItemStatus.pending || item.status == BulkPublishItemStatus.publishing,
+              )
               .length,
     );
     return BulkPublishSheet(

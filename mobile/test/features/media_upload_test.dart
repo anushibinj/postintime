@@ -69,7 +69,8 @@ void main() {
     await tester.pump();
     await tapText(tester, 'Create post');
 
-    final create = app.backend.bodies[app.backend.log.indexWhere((e) => e.startsWith('POST') && e.endsWith('/posts'))]! as Map;
+    final create =
+        app.backend.bodies[app.backend.log.indexWhere((e) => e.startsWith('POST') && e.endsWith('/posts'))]! as Map;
     expect(create['mediaId'], startsWith('media-'));
     expect(find.text('View post'), findsOneWidget);
     expect(find.text('No image'), findsNothing);
@@ -141,11 +142,11 @@ void main() {
   testWidgets('editing a post shows its current image and keeps it', (tester) async {
     final app = await createApp();
     final channelId = app.backend.addChannel(name: 'Tech', slug: 'tech')['id']! as String;
-    app.backend.addPost(channelId, title: 'With image', media: {
-      'id': 'media-x',
-      'url': 'http://fake.test/api/v1/media/files/x.png',
-      'contentType': 'image/png',
-    });
+    app.backend.addPost(
+      channelId,
+      title: 'With image',
+      media: {'id': 'media-x', 'url': 'http://fake.test/api/v1/media/files/x.png', 'contentType': 'image/png'},
+    );
     await pumpApp(tester, app, extra: [imagePickerProvider.overrideWithValue(FakeImagePicker())]);
     await tapText(tester, 'View');
     await tapText(tester, 'With image');

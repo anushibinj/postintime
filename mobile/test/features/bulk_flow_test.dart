@@ -3,10 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/harness.dart';
 
-Future<({TestApp app, String channelId, List<String> postIds, String hookId})> openChannelWithPosts(WidgetTester tester) async {
+Future<({TestApp app, String channelId, List<String> postIds, String hookId})> openChannelWithPosts(
+  WidgetTester tester,
+) async {
   final app = await createApp();
   final channelId = app.backend.addChannel(name: 'Tech', slug: 'tech')['id']! as String;
-  final hook = app.backend.addAccount(channelId, platform: 'linkedin', name: 'LinkedIn hook', mode: 'webhook', webhookUrl: 'https://n8n.test/hook');
+  final hook = app.backend.addAccount(
+    channelId,
+    platform: 'linkedin',
+    name: 'LinkedIn hook',
+    mode: 'webhook',
+    webhookUrl: 'https://n8n.test/hook',
+  );
   app.backend.addAccount(channelId, platform: 'instagram', name: 'Manual IG');
   // Added oldest first, so the list (newest update first) reads C, B, A.
   final ids = [
@@ -39,7 +47,11 @@ void main() {
 
     expect(find.text('Added 2 posts to the bulk posting queue'), findsOneWidget);
     expect(find.text('2 selected'), findsNothing, reason: 'selection is cleared after queueing');
-    final body = opened.app.backend.bodies[opened.app.backend.log.lastIndexOf('POST /api/v1/channels/${opened.channelId}/bulk-publish-jobs')]! as Map;
+    final body =
+        opened.app.backend.bodies[opened.app.backend.log.lastIndexOf(
+              'POST /api/v1/channels/${opened.channelId}/bulk-publish-jobs',
+            )]!
+            as Map;
     expect(body, {
       'postIds': [opened.postIds[1], opened.postIds[0]],
       'intervalMinutes': 5,

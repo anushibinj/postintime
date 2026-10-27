@@ -26,12 +26,12 @@ class FakeAdapter implements HttpClientAdapter {
 }
 
 ResponseBody json(Object body, {int status = 200}) => ResponseBody.fromString(
-      jsonEncode(body),
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+  jsonEncode(body),
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+  },
+);
 
 /// An unsigned JWT-shaped token carrying [claims].
 String tokenWith(Map<String, Object?> claims) {
@@ -39,7 +39,12 @@ String tokenWith(Map<String, Object?> claims) {
   return '${part({'alg': 'none'})}.${part(claims)}.sig';
 }
 
-ApiClient clientFor(FakeAdapter adapter, {String? token, Duration timeout = requestTimeout, DateTime Function()? clock}) {
+ApiClient clientFor(
+  FakeAdapter adapter, {
+  String? token,
+  Duration timeout = requestTimeout,
+  DateTime Function()? clock,
+}) {
   final dio = Dio()..httpClientAdapter = adapter;
   return ApiClient(
     tokenStore: MemoryTokenStore(token),
@@ -51,7 +56,11 @@ ApiClient clientFor(FakeAdapter adapter, {String? token, Duration timeout = requ
 }
 
 void main() {
-  final valid = tokenWith({'sub': 'user-1', 'email': 'me@example.com', 'exp': DateTime(2100).millisecondsSinceEpoch ~/ 1000});
+  final valid = tokenWith({
+    'sub': 'user-1',
+    'email': 'me@example.com',
+    'exp': DateTime(2100).millisecondsSinceEpoch ~/ 1000,
+  });
 
   group('apiFetch timeout', () {
     test('waits 15 minutes before giving up', () {
@@ -60,9 +69,9 @@ void main() {
         final adapter = FakeAdapter((options, cancelFuture) {
           // A server that never answers; only an abort ends the request.
           final completer = Completer<ResponseBody>();
-          cancelFuture?.then((_) => completer.completeError(
-                DioException.requestCancelled(requestOptions: options, reason: 'cancelled'),
-              ));
+          cancelFuture?.then(
+            (_) => completer.completeError(DioException.requestCancelled(requestOptions: options, reason: 'cancelled')),
+          );
           return completer.future;
         });
         final client = clientFor(adapter, token: valid);
@@ -71,9 +80,15 @@ void main() {
 
         var settled = false;
         Object? outcome;
-        client.get('/api/v1/slow').then<void>((_) {}, onError: (Object e) {
-          outcome = e;
-        }).whenComplete(() => settled = true);
+        client
+            .get('/api/v1/slow')
+            .then<void>(
+              (_) {},
+              onError: (Object e) {
+                outcome = e;
+              },
+            )
+            .whenComplete(() => settled = true);
 
         async.elapse(requestTimeout - const Duration(milliseconds: 1));
         expect(settled, isFalse);
@@ -87,18 +102,23 @@ void main() {
     test('still honours a caller abort', () async {
       final adapter = FakeAdapter((options, cancelFuture) {
         final completer = Completer<ResponseBody>();
-        cancelFuture?.then((_) => completer.completeError(
-              DioException.requestCancelled(requestOptions: options, reason: 'cancelled'),
-            ));
+        cancelFuture?.then(
+          (_) => completer.completeError(DioException.requestCancelled(requestOptions: options, reason: 'cancelled')),
+        );
         return completer.future;
       });
       final client = clientFor(adapter, token: valid);
       await client.load();
       final cancel = CancelToken();
       Object? error;
-      final caller = client.send('GET', '/api/v1/slow', cancelToken: cancel).then<void>((_) {}, onError: (Object e) {
-        error = e;
-      });
+      final caller = client
+          .send('GET', '/api/v1/slow', cancelToken: cancel)
+          .then<void>(
+            (_) {},
+            onError: (Object e) {
+              error = e;
+            },
+          );
       cancel.cancel('user');
       await caller;
       expect(error, isA<DioException>());
@@ -140,17 +160,22 @@ void main() {
       await client.load();
       await expectLater(
         client.post('/api/v1/channels', body: {}),
-        throwsA(isA<ApiException>()
-            .having((e) => e.message, 'message', 'Slug taken')
-            .having((e) => e.code, 'code', 'CONFLICT')
-            .having((e) => e.statusCode, 'statusCode', 409)),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.message, 'message', 'Slug taken')
+              .having((e) => e.code, 'code', 'CONFLICT')
+              .having((e) => e.statusCode, 'statusCode', 409),
+        ),
       );
     });
 
     test('falls back to a generic message when the error body is empty', () async {
       final client = clientFor(FakeAdapter((_, _) async => ResponseBody.fromString('{}', 500)), token: valid);
       await client.load();
-      await expectLater(client.get('/api/v1/x'), throwsA(isA<ApiException>().having((e) => e.message, 'message', 'Request failed')));
+      await expectLater(
+        client.get('/api/v1/x'),
+        throwsA(isA<ApiException>().having((e) => e.message, 'message', 'Request failed')),
+      );
     });
   });
 
@@ -163,7 +188,10 @@ void main() {
       var expiredCalls = 0;
       client.onSessionExpired(() => expiredCalls++);
 
-      await expectLater(client.get('/api/v1/channels'), throwsA(isA<ApiException>().having((e) => e.isSessionExpired, 'expired', isTrue)));
+      await expectLater(
+        client.get('/api/v1/channels'),
+        throwsA(isA<ApiException>().having((e) => e.isSessionExpired, 'expired', isTrue)),
+      );
       expect(expiredCalls, 1);
       expect(client.token, isNull);
       expect(adapter.requests, isEmpty);

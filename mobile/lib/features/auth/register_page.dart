@@ -36,9 +36,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
     setState(() => _submitting = true);
     try {
-      await ref
-          .read(authProvider.notifier)
-          .register(_email.text.trim(), _password.text, _displayName.text.trim());
+      await ref.read(authProvider.notifier).register(_email.text.trim(), _password.text, _displayName.text.trim());
       Toast.success('Account created!');
       if (mounted) {
         context.go('/');
@@ -87,8 +85,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               hint: 'At least 8 characters',
               autofillHints: const [AutofillHints.newPassword],
               textInputAction: TextInputAction.done,
-              validator: (value) =>
-                  (value ?? '').length < 8 ? 'Password must be at least 8 characters' : null,
+              validator: (value) => (value ?? '').length < 8 ? 'Password must be at least 8 characters' : null,
               onSubmitted: _submit,
             ),
             const SizedBox(height: 20),

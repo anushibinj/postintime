@@ -110,10 +110,10 @@ class FakeBackend {
   // ---------------------------------------------------------------------------------------------
 
   Map<String, dynamic> _channelJson(Map<String, dynamic> channel) => {
-        ...channel,
-        'postCount': posts[channel['id']]!.length,
-        'socialAccountCount': accounts[channel['id']]!.length,
-      };
+    ...channel,
+    'postCount': posts[channel['id']]!.length,
+    'socialAccountCount': accounts[channel['id']]!.length,
+  };
 
   Map<String, dynamic> _postJson(Map<String, dynamic> post) {
     final postTargets = targets[post['id']] ?? [];
@@ -170,10 +170,10 @@ class FakeBackend {
   }
 
   Map<String, dynamic> _tokenJson(Map<String, dynamic> token, {bool secret = false}) => {
-        for (final entry in token.entries)
-          if (entry.key != 'secret') entry.key: entry.value,
-        if (secret) 'token': token['secret'],
-      };
+    for (final entry in token.entries)
+      if (entry.key != 'secret') entry.key: entry.value,
+    if (secret) 'token': token['secret'],
+  };
 
   // ---------------------------------------------------------------------------------------------
 
@@ -337,12 +337,15 @@ class FakeBackend {
           } else {
             target['status'] = 'publishing';
           }
-          return (200, {
-            'targetId': target['id'],
-            'status': target['status'],
-            'publishingMode': account['postingMode'],
-            'instructions': {'copyCaption': true, 'downloadMedia': true, 'destinationUrl': account['profileUrl']},
-          });
+          return (
+            200,
+            {
+              'targetId': target['id'],
+              'status': target['status'],
+              'publishingMode': account['postingMode'],
+              'instructions': {'copyCaption': true, 'downloadMedia': true, 'destinationUrl': account['profileUrl']},
+            },
+          );
         case 'mark-published':
           target['status'] = 'published';
           target['publishedAt'] = _stamp();
@@ -476,11 +479,11 @@ class FakeBackend {
       (posts[channelId] ?? []).where((p) => p['id'] == postId).firstOrNull;
 
   Map<String, dynamic> _authResponse(Map<String, dynamic> user) => {
-        'token': jwt(sub: user['id']! as String, email: user['email']! as String),
-        'userId': user['id'],
-        'email': user['email'],
-        'displayName': user['displayName'],
-      };
+    'token': jwt(sub: user['id']! as String, email: user['email']! as String),
+    'userId': user['id'],
+    'email': user['email'],
+    'displayName': user['displayName'],
+  };
 
   void _applyWebhookAuth(Map<String, dynamic> account, Map<String, dynamic> json) {
     if (json['webhookAuthType'] != null) account['webhookAuthType'] = json['webhookAuthType'];

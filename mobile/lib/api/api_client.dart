@@ -64,7 +64,7 @@ class ApiClient {
     Dio? dio,
     this._timeout = requestTimeout,
     this._clock = DateTime.now,
-  })  : _dio = dio ?? Dio();
+  }) : _dio = dio ?? Dio();
 
   final TokenStore _tokenStore;
   final Dio _dio;

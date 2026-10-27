@@ -34,10 +34,10 @@ void usePhoneScreen(WidgetTester tester) {
 }
 
 List<Override> testOverrides(TestApp app, SharedPreferences prefs) => [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      apiClientProvider.overrideWithValue(app.client),
-      nowProvider.overrideWith((ref) => Stream.value(testNow)),
-    ];
+  sharedPreferencesProvider.overrideWithValue(prefs),
+  apiClientProvider.overrideWithValue(app.client),
+  nowProvider.overrideWith((ref) => Stream.value(testNow)),
+];
 
 /// Builds a client wired to [backend], optionally already signed in.
 Future<TestApp> createApp({FakeBackend? backend, bool signedIn = true}) async {
@@ -77,7 +77,12 @@ Future<void> pumpApp(WidgetTester tester, TestApp app, {List<Override> extra = c
 }
 
 /// Pumps a single [child] widget inside the providers, for component tests.
-Future<void> pumpWidgetWithApp(WidgetTester tester, TestApp app, Widget child, {List<Override> extra = const []}) async {
+Future<void> pumpWidgetWithApp(
+  WidgetTester tester,
+  TestApp app,
+  Widget child, {
+  List<Override> extra = const [],
+}) async {
   usePhoneScreen(tester);
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -85,7 +90,10 @@ Future<void> pumpWidgetWithApp(WidgetTester tester, TestApp app, Widget child, {
     ProviderScope(
       retry: (_, _) => null,
       overrides: [...testOverrides(app, prefs), ...extra],
-      child: MaterialApp(navigatorKey: rootNavigatorKey, home: Scaffold(body: child)),
+      child: MaterialApp(
+        navigatorKey: rootNavigatorKey,
+        home: Scaffold(body: child),
+      ),
     ),
   );
   await tester.pumpAndSettle();

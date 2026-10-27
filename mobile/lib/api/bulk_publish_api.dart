@@ -19,11 +19,10 @@ class BulkPublishApi {
     int intervalMinutes,
     List<String> socialAccountIds,
   ) async {
-    final json = await _client.post(_jobs(channelId), body: {
-      'postIds': postIds,
-      'intervalMinutes': intervalMinutes,
-      'socialAccountIds': socialAccountIds,
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      _jobs(channelId),
+      body: {'postIds': postIds, 'intervalMinutes': intervalMinutes, 'socialAccountIds': socialAccountIds},
+    ) as Map<String, dynamic>;
     return BulkPublishJob.fromJson(json);
   }
 

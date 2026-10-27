@@ -20,10 +20,13 @@ Future<({TestApp app, String channelId})> openChannel(
 
 void main() {
   testWidgets('lists posts with their captions, newest update first', (tester) async {
-    await openChannel(tester, seed: (backend, channelId) {
-      backend.addPost(channelId, title: 'First post', caption: 'Old caption');
-      backend.addPost(channelId, title: 'Second post', caption: 'Newer caption');
-    });
+    await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addPost(channelId, title: 'First post', caption: 'Old caption');
+        backend.addPost(channelId, title: 'Second post', caption: 'Newer caption');
+      },
+    );
 
     expect(find.text('First post'), findsOneWidget);
     expect(find.text('Newer caption'), findsOneWidget);
@@ -50,7 +53,10 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextField, '').first, 'Launch day');
     await tester.pump();
-    await tester.enterText(find.byWidgetPredicate((w) => w is TextField && w.decoration?.hintText?.startsWith('Write the caption') == true), 'We are live!');
+    await tester.enterText(
+      find.byWidgetPredicate((w) => w is TextField && w.decoration?.hintText?.startsWith('Write the caption') == true),
+      'We are live!',
+    );
     await tester.pump();
     expect(find.text('12 characters'), findsOneWidget);
     expect(find.text('Keep working on this post. Drafts are not treated as ready to publish.'), findsOneWidget);
@@ -67,14 +73,19 @@ void main() {
     expect(find.text('Launch day'), findsOneWidget);
     expect(find.text('We are live!'), findsOneWidget);
     expect(find.text('12 characters'), findsOneWidget);
-    final body = opened.app.backend.bodies[opened.app.backend.log.indexOf('POST /api/v1/channels/${opened.channelId}/posts')]! as Map;
+    final body =
+        opened.app.backend.bodies[opened.app.backend.log.indexOf('POST /api/v1/channels/${opened.channelId}/posts')]!
+            as Map;
     expect(body, {'title': 'Launch day', 'caption': 'We are live!', 'status': 'ready'});
   });
 
   testWidgets('edits a post, filling the form from the saved post', (tester) async {
-    final opened = await openChannel(tester, seed: (backend, channelId) {
-      backend.addPost(channelId, title: 'Old title', caption: 'Old caption', status: 'ready');
-    });
+    final opened = await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addPost(channelId, title: 'Old title', caption: 'Old caption', status: 'ready');
+      },
+    );
 
     await tapText(tester, 'Old title');
     expect(find.text('View post'), findsOneWidget);
@@ -97,9 +108,12 @@ void main() {
   });
 
   testWidgets('deleting a post asks first and returns to the channel', (tester) async {
-    final opened = await openChannel(tester, seed: (backend, channelId) {
-      backend.addPost(channelId, title: 'Doomed');
-    });
+    final opened = await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addPost(channelId, title: 'Doomed');
+      },
+    );
 
     await tapText(tester, 'Doomed');
     await tester.tap(find.byTooltip('Delete'));
@@ -119,11 +133,14 @@ void main() {
   });
 
   testWidgets('pages through posts and can change the page size', (tester) async {
-    await openChannel(tester, seed: (backend, channelId) {
-      for (var i = 1; i <= 25; i++) {
-        backend.addPost(channelId, title: 'Post $i');
-      }
-    });
+    await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        for (var i = 1; i <= 25; i++) {
+          backend.addPost(channelId, title: 'Post $i');
+        }
+      },
+    );
 
     expect(find.text('Post 25'), findsOneWidget);
     await scrollTo(tester, find.text('1-20 of 25 posts'));
@@ -144,11 +161,14 @@ void main() {
   });
 
   testWidgets('the search screen filters by text and by status', (tester) async {
-    await openChannel(tester, seed: (backend, channelId) {
-      backend.addPost(channelId, title: 'Alpha launch', status: 'ready');
-      backend.addPost(channelId, title: 'Beta notes', status: 'draft');
-      backend.addPost(channelId, title: 'Alpha draft', status: 'draft');
-    });
+    await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addPost(channelId, title: 'Alpha launch', status: 'ready');
+        backend.addPost(channelId, title: 'Beta notes', status: 'draft');
+        backend.addPost(channelId, title: 'Alpha draft', status: 'draft');
+      },
+    );
 
     await tester.tap(find.byTooltip('Search posts'));
     await tester.pumpAndSettle();
@@ -172,10 +192,13 @@ void main() {
   });
 
   testWidgets('account buttons mark a post as posted and unmark it', (tester) async {
-    final opened = await openChannel(tester, seed: (backend, channelId) {
-      backend.addAccount(channelId, platform: 'instagram', name: 'Insta');
-      backend.addPost(channelId, title: 'Photo');
-    });
+    final opened = await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addAccount(channelId, platform: 'instagram', name: 'Insta');
+        backend.addPost(channelId, title: 'Photo');
+      },
+    );
     final button = find.byTooltip('Insta · Manual · Not posted');
     expect(button, findsOneWidget);
 
@@ -192,20 +215,32 @@ void main() {
   });
 
   testWidgets('only enabled accounts get a button', (tester) async {
-    await openChannel(tester, seed: (backend, channelId) {
-      backend.addAccount(channelId, platform: 'x', name: 'On X');
-      backend.addAccount(channelId, platform: 'facebook', name: 'On FB')['enabled'] = false;
-      backend.addPost(channelId, title: 'Photo');
-    });
+    await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addAccount(channelId, platform: 'x', name: 'On X');
+        backend.addAccount(channelId, platform: 'facebook', name: 'On FB')['enabled'] = false;
+        backend.addPost(channelId, title: 'Photo');
+      },
+    );
     expect(find.byTooltip('On X · Manual · Not posted'), findsOneWidget);
     expect(find.byTooltip('On FB · Manual · Not posted'), findsNothing);
   });
 
   testWidgets('a failing webhook shows the server message in an error dialog', (tester) async {
-    final opened = await openChannel(tester, seed: (backend, channelId) {
-      backend.addAccount(channelId, platform: 'linkedin', name: 'Hook', mode: 'webhook', webhookUrl: 'https://n8n.test/hook');
-      backend.addPost(channelId, title: 'Photo');
-    });
+    final opened = await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addAccount(
+          channelId,
+          platform: 'linkedin',
+          name: 'Hook',
+          mode: 'webhook',
+          webhookUrl: 'https://n8n.test/hook',
+        );
+        backend.addPost(channelId, title: 'Photo');
+      },
+    );
     opened.app.backend.webhookFailure = 'Webhook responded 500: boom';
 
     await tester.tap(find.byTooltip('Hook · Webhook · Not posted'));

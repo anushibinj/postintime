@@ -49,7 +49,10 @@ class _PostListPageState extends ConsumerState<PostListPage> {
   @override
   Widget build(BuildContext context) {
     final channelId = widget.channelId;
-    final key = (channelId: channelId, filters: PostFilters(page: _page, size: _size, search: _search, status: _status));
+    final key = (
+      channelId: channelId,
+      filters: PostFilters(page: _page, size: _size, search: _search, status: _status),
+    );
     final posts = ref.watch(postsProvider(key));
     final data = posts.value;
 

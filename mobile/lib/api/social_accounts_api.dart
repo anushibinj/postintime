@@ -24,15 +24,15 @@ class SocialAccountInput {
   final String? webhookPassword;
 
   Map<String, dynamic> toJson() => {
-        if (platform != null) 'platform': platform!.name,
-        if (name != null) 'name': name,
-        if (profileUrl != null) 'profileUrl': profileUrl,
-        if (postingMode != null) 'postingMode': postingMode!.name,
-        if (webhookUrl != null) 'webhookUrl': webhookUrl,
-        if (webhookAuthType != null) 'webhookAuthType': webhookAuthType!.name,
-        if (webhookUsername != null) 'webhookUsername': webhookUsername,
-        if (webhookPassword != null) 'webhookPassword': webhookPassword,
-      };
+    if (platform != null) 'platform': platform!.name,
+    if (name != null) 'name': name,
+    if (profileUrl != null) 'profileUrl': profileUrl,
+    if (postingMode != null) 'postingMode': postingMode!.name,
+    if (webhookUrl != null) 'webhookUrl': webhookUrl,
+    if (webhookAuthType != null) 'webhookAuthType': webhookAuthType!.name,
+    if (webhookUsername != null) 'webhookUsername': webhookUsername,
+    if (webhookPassword != null) 'webhookPassword': webhookPassword,
+  };
 }
 
 class SocialAccountsApi {

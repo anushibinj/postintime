@@ -42,7 +42,9 @@ void main() {
 
   testWidgets('the session ends by itself when the token expires', (tester) async {
     final app = await createApp();
-    await app.client.setToken(FakeBackend.jwt(sub: 'u', email: 'me@example.com', lifetime: const Duration(seconds: 30)));
+    await app.client.setToken(
+      FakeBackend.jwt(sub: 'u', email: 'me@example.com', lifetime: const Duration(seconds: 30)),
+    );
     await pumpApp(tester, app);
     expect(find.text('No channels yet'), findsOneWidget);
 

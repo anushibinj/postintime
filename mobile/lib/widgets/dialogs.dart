@@ -91,10 +91,7 @@ class SheetScaffold extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: loading ? null : () => Navigator.of(context).pop(),
-                  child: Text(cancelText),
-                ),
+                TextButton(onPressed: loading ? null : () => Navigator.of(context).pop(), child: Text(cancelText)),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: loading || !okEnabled ? null : onOk,

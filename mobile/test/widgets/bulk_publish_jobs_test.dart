@@ -6,31 +6,44 @@ import '../support/fake_backend.dart';
 import '../support/harness.dart';
 
 Map<String, dynamic> jobJson(String channelId, List<Map<String, dynamic>> items, {String status = 'running'}) => {
-      'id': 'job-1',
-      'channelId': channelId,
-      'intervalMinutes': 5,
-      'status': status,
-      'totalItems': items.length,
-      'processedItems': 0,
-      'failedItems': 0,
-      'socialAccountIds': ['account'],
-      'createdAt': testNow.toIso8601String(),
-      'updatedAt': testNow.toIso8601String(),
-      'items': items,
-    };
+  'id': 'job-1',
+  'channelId': channelId,
+  'intervalMinutes': 5,
+  'status': status,
+  'totalItems': items.length,
+  'processedItems': 0,
+  'failedItems': 0,
+  'socialAccountIds': ['account'],
+  'createdAt': testNow.toIso8601String(),
+  'updatedAt': testNow.toIso8601String(),
+  'items': items,
+};
 
-Map<String, dynamic> itemJson(String id, String title, String status, {int minutes = 5, int? doneMinutesAgo, String? error}) => {
-      'id': id,
-      'postId': 'post-$id',
-      'postTitle': title,
-      'position': 0,
-      'status': status,
-      'scheduledAt': testNow.add(Duration(minutes: minutes)).toUtc().toIso8601String(),
-      'errorMessage': error,
-      'processedAt': doneMinutesAgo == null ? null : testNow.subtract(Duration(minutes: doneMinutesAgo)).toUtc().toIso8601String(),
-    };
+Map<String, dynamic> itemJson(
+  String id,
+  String title,
+  String status, {
+  int minutes = 5,
+  int? doneMinutesAgo,
+  String? error,
+}) => {
+  'id': id,
+  'postId': 'post-$id',
+  'postTitle': title,
+  'position': 0,
+  'status': status,
+  'scheduledAt': testNow.add(Duration(minutes: minutes)).toUtc().toIso8601String(),
+  'errorMessage': error,
+  'processedAt': doneMinutesAgo == null
+      ? null
+      : testNow.subtract(Duration(minutes: doneMinutesAgo)).toUtc().toIso8601String(),
+};
 
-Future<TestApp> pumpJobs(WidgetTester tester, List<Map<String, dynamic>> items, {void Function(FakeBackend)? seed}) async {
+Future<TestApp> pumpJobs(
+  WidgetTester tester,
+  List<Map<String, dynamic>> items, {
+  void Function(FakeBackend)? seed,
+}) async {
   final app = await createApp();
   app.backend.jobs['channel'] = [jobJson('channel', items)];
   app.backend.channels['channel'] = {'id': 'channel'};

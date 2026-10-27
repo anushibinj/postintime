@@ -13,7 +13,11 @@ class FakeBackendAdapter implements HttpClientAdapter {
   final FakeBackend backend;
 
   @override
-  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
     Object? body;
     final data = options.data;
     if (data is String && data.isNotEmpty) {

@@ -19,25 +19,17 @@ class ChannelActions {
   }
 
   Future<Channel> create({required String name, required String slug, String? description}) async {
-    final channel = await _ref.read(channelsApiProvider).createChannel(name: name, slug: slug, description: description);
+    final channel = await _ref
+        .read(channelsApiProvider)
+        .createChannel(name: name, slug: slug, description: description);
     _refresh();
     return channel;
   }
 
-  Future<Channel> update(
-    String channelId, {
-    String? name,
-    String? slug,
-    String? description,
-    bool? enabled,
-  }) async {
-    final channel = await _ref.read(channelsApiProvider).updateChannel(
-          channelId,
-          name: name,
-          slug: slug,
-          description: description,
-          enabled: enabled,
-        );
+  Future<Channel> update(String channelId, {String? name, String? slug, String? description, bool? enabled}) async {
+    final channel = await _ref
+        .read(channelsApiProvider)
+        .updateChannel(channelId, name: name, slug: slug, description: description, enabled: enabled);
     _refresh(channelId);
     return channel;
   }
@@ -56,12 +48,7 @@ class PostActions {
   final Ref _ref;
   final String channelId;
 
-  Future<Post> create({
-    required String title,
-    String? caption,
-    String? mediaId,
-    required PostStatus status,
-  }) async {
+  Future<Post> create({required String title, String? caption, String? mediaId, required PostStatus status}) async {
     final post = await _ref
         .read(postsApiProvider)
         .createPost(channelId, title: title, caption: caption, mediaId: mediaId, status: status);
@@ -71,13 +58,7 @@ class PostActions {
     return post;
   }
 
-  Future<Post> update(
-    String postId, {
-    String? title,
-    String? caption,
-    String? mediaId,
-    PostStatus? status,
-  }) async {
+  Future<Post> update(String postId, {String? title, String? caption, String? mediaId, PostStatus? status}) async {
     final post = await _ref
         .read(postsApiProvider)
         .updatePost(channelId, postId, title: title, caption: caption, mediaId: mediaId, status: status);
@@ -128,8 +109,9 @@ class PublishingActions {
   }
 
   Future<PostTarget> markPublished(String targetId, {String? externalUrl}) async {
-    final target =
-        await _ref.read(publishingApiProvider).markPublished(channelId, postId, targetId, externalUrl: externalUrl);
+    final target = await _ref
+        .read(publishingApiProvider)
+        .markPublished(channelId, postId, targetId, externalUrl: externalUrl);
     _refresh();
     return target;
   }
@@ -149,8 +131,9 @@ class PublishingActions {
   }
 }
 
-final publishingActionsProvider =
-    Provider.family<PublishingActions, PostKey>((ref, key) => PublishingActions(ref, key.channelId, key.postId));
+final publishingActionsProvider = Provider.family<PublishingActions, PostKey>(
+  (ref, key) => PublishingActions(ref, key.channelId, key.postId),
+);
 
 class SocialAccountActions {
   SocialAccountActions(this._ref, this.channelId);
@@ -194,8 +177,9 @@ class SocialAccountActions {
   }
 }
 
-final socialAccountActionsProvider =
-    Provider.family<SocialAccountActions, String>((ref, channelId) => SocialAccountActions(ref, channelId));
+final socialAccountActionsProvider = Provider.family<SocialAccountActions, String>(
+  (ref, channelId) => SocialAccountActions(ref, channelId),
+);
 
 class BulkPublishActions {
   BulkPublishActions(this._ref, this.channelId);
@@ -214,7 +198,9 @@ class BulkPublishActions {
     required int intervalMinutes,
     required List<String> socialAccountIds,
   }) async {
-    final job = await _ref.read(bulkPublishApiProvider).createJob(channelId, postIds, intervalMinutes, socialAccountIds);
+    final job = await _ref
+        .read(bulkPublishApiProvider)
+        .createJob(channelId, postIds, intervalMinutes, socialAccountIds);
     _refresh();
     return job;
   }
@@ -232,8 +218,9 @@ class BulkPublishActions {
   }
 }
 
-final bulkPublishActionsProvider =
-    Provider.family<BulkPublishActions, String>((ref, channelId) => BulkPublishActions(ref, channelId));
+final bulkPublishActionsProvider = Provider.family<BulkPublishActions, String>(
+  (ref, channelId) => BulkPublishActions(ref, channelId),
+);
 
 class ApiTokenActions {
   ApiTokenActions(this._ref);

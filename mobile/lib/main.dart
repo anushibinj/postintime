@@ -17,10 +17,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       retry: appRetry,
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        apiClientProvider.overrideWithValue(client),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs), apiClientProvider.overrideWithValue(client)],
       child: const PostInTimeApp(),
     ),
   );

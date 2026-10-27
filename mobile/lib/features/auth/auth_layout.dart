@@ -35,7 +35,9 @@ class AuthLayout extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Card(child: Padding(padding: const EdgeInsets.all(24), child: child)),
+                  Card(
+                    child: Padding(padding: const EdgeInsets.all(24), child: child),
+                  ),
                   const SizedBox(height: 8),
                   const ServerAddressButton(),
                 ],
@@ -166,8 +168,7 @@ class _ServerAddressSheetState extends ConsumerState<_ServerAddressSheet> {
               keyboardType: TextInputType.url,
               autocorrect: false,
               decoration: const InputDecoration(labelText: 'API base URL', hintText: 'https://api.example.com'),
-              validator: (value) =>
-                  ApiConfig.isValid(value ?? '') ? null : 'Enter a full http:// or https:// address',
+              validator: (value) => ApiConfig.isValid(value ?? '') ? null : 'Enter a full http:// or https:// address',
             ),
             const SizedBox(height: 8),
             Align(

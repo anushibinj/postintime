@@ -33,8 +33,7 @@ class _QueueEntry {
   final BulkPublishItem item;
 }
 
-String? _progressKey(List<BulkPublishJob>? jobs) =>
-    jobs?.map((job) => '${job.id}:${job.processedItems}').join(',');
+String? _progressKey(List<BulkPublishJob>? jobs) => jobs?.map((job) => '${job.id}:${job.processedItems}').join(',');
 
 /// The channel's bulk posting queue plus the most recent bulk posts that already went out.
 class BulkPublishJobs extends ConsumerStatefulWidget {
@@ -110,14 +109,17 @@ class _BulkPublishJobsState extends ConsumerState<BulkPublishJobs> {
         for (final item in job.items) _QueueEntry(job, item),
     ];
     // Waiting posts plus the one being posted right now (its webhooks can take minutes).
-    final queue = entries
-        .where((e) => e.item.status == BulkPublishItemStatus.pending || e.item.status == BulkPublishItemStatus.publishing)
-        .toList()
-      ..sort((a, b) => a.item.scheduledAt.compareTo(b.item.scheduledAt));
-    final recent = entries
-        .where((e) => e.item.processedAt != null && e.item.status != BulkPublishItemStatus.publishing)
-        .toList()
-      ..sort((a, b) => b.item.processedAt!.compareTo(a.item.processedAt!));
+    final queue =
+        entries
+            .where(
+              (e) =>
+                  e.item.status == BulkPublishItemStatus.pending || e.item.status == BulkPublishItemStatus.publishing,
+            )
+            .toList()
+          ..sort((a, b) => a.item.scheduledAt.compareTo(b.item.scheduledAt));
+    final recent =
+        entries.where((e) => e.item.processedAt != null && e.item.status != BulkPublishItemStatus.publishing).toList()
+          ..sort((a, b) => b.item.processedAt!.compareTo(a.item.processedAt!));
     final recentShown = recent.take(_recentLimit).toList();
 
     if (queue.isEmpty && recentShown.isEmpty) {
@@ -150,10 +152,7 @@ class _BulkPublishJobsState extends ConsumerState<BulkPublishJobs> {
                 ),
                 extra: TextButton(
                   onPressed: _cancellingAll ? null : () => _cancelAll(jobs),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    visualDensity: VisualDensity.compact,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.danger, visualDensity: VisualDensity.compact),
                   child: _cancellingAll
                       ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Cancel all'),

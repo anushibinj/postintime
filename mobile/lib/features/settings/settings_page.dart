@@ -128,7 +128,10 @@ class SettingsPage extends ConsumerWidget {
                 onRetry: () => ref.invalidate(apiTokensProvider),
               )
             else if (!tokens.hasValue)
-              const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
             else if (tokens.requireValue.isEmpty)
               const Text('No API tokens yet.', style: AppText.secondary)
             else
@@ -196,7 +199,10 @@ class _TokenCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: AppColors.rowBorder),
                         ),
-                        child: Text('${token.tokenPrefix}…', style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),
+                        child: Text(
+                          '${token.tokenPrefix}…',
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(formatExpiry(token.expiresAt), style: AppText.secondary),
@@ -208,7 +214,8 @@ class _TokenCard extends StatelessWidget {
                         hint: const Text('Change expiry'),
                         decoration: const InputDecoration(isDense: true),
                         items: [
-                          for (final option in expiryOptions) DropdownMenuItem(value: option.value, child: Text(option.label)),
+                          for (final option in expiryOptions)
+                            DropdownMenuItem(value: option.value, child: Text(option.label)),
                         ],
                         onChanged: (value) {
                           if (value != null) {

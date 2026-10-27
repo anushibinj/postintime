@@ -12,10 +12,10 @@ class ApiTokensApi {
   }
 
   Future<ApiToken> createApiToken({required String name, DateTime? expiresAt}) async {
-    final json = await _client.post('/api/v1/api-tokens', body: {
-      'name': name,
-      'expiresAt': expiresAt?.toUtc().toIso8601String(),
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      '/api/v1/api-tokens',
+      body: {'name': name, 'expiresAt': expiresAt?.toUtc().toIso8601String()},
+    ) as Map<String, dynamic>;
     return ApiToken.fromJson(json);
   }
 
@@ -26,19 +26,25 @@ class ApiTokensApi {
     DateTime? expiresAt,
     bool neverExpires = false,
   }) async {
-    final json = await _client.patch('/api/v1/api-tokens/$tokenId', body: {
-      'name': ?name,
-      if (expiresAt != null) 'expiresAt': expiresAt.toUtc().toIso8601String(),
-      if (neverExpires) 'neverExpires': true,
-    }) as Map<String, dynamic>;
+    final json = await _client.patch(
+      '/api/v1/api-tokens/$tokenId',
+      body: {
+        'name': ?name,
+        if (expiresAt != null) 'expiresAt': expiresAt.toUtc().toIso8601String(),
+        if (neverExpires) 'neverExpires': true,
+      },
+    ) as Map<String, dynamic>;
     return ApiToken.fromJson(json);
   }
 
   Future<ApiToken> refreshApiToken(String tokenId, {DateTime? expiresAt, bool neverExpires = false}) async {
-    final json = await _client.post('/api/v1/api-tokens/$tokenId/refresh', body: {
-      if (expiresAt != null) 'expiresAt': expiresAt.toUtc().toIso8601String(),
-      if (neverExpires) 'neverExpires': true,
-    }) as Map<String, dynamic>;
+    final json = await _client.post(
+      '/api/v1/api-tokens/$tokenId/refresh',
+      body: {
+        if (expiresAt != null) 'expiresAt': expiresAt.toUtc().toIso8601String(),
+        if (neverExpires) 'neverExpires': true,
+      },
+    ) as Map<String, dynamic>;
     return ApiToken.fromJson(json);
   }
 
