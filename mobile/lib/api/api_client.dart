@@ -59,27 +59,22 @@ bool _isAuthRequest(String path) => path.startsWith('/api/v1/auth/');
 /// signs the user out when the session expires.
 class ApiClient {
   ApiClient({
-    required TokenStore tokenStore,
-    required String baseUrl,
+    required this._tokenStore,
+    required this.baseUrl,
     Dio? dio,
-    Duration timeout = requestTimeout,
-    DateTime Function() clock = DateTime.now,
-  })  : _tokenStore = tokenStore,
-        _baseUrl = baseUrl,
-        _timeout = timeout,
-        _clock = clock,
-        _dio = dio ?? Dio();
+    this._timeout = requestTimeout,
+    this._clock = DateTime.now,
+  })  : _dio = dio ?? Dio();
 
   final TokenStore _tokenStore;
   final Dio _dio;
   final Duration _timeout;
   final DateTime Function() _clock;
   final Set<void Function()> _sessionExpiredListeners = {};
-  String _baseUrl;
   String? _token;
 
-  String get baseUrl => _baseUrl;
-  set baseUrl(String value) => _baseUrl = value;
+  /// The API origin; changing it applies to the next request.
+  String baseUrl;
 
   /// Reads the stored token so [token] is available synchronously.
   Future<void> load() async {
@@ -159,7 +154,7 @@ class ApiClient {
 
     try {
       final response = await _dio.request<String>(
-        '$_baseUrl$path',
+        '$baseUrl$path',
         data: formData ?? (body == null ? null : jsonEncode(body)),
         queryParameters: query,
         cancelToken: cancel,

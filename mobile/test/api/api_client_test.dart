@@ -106,7 +106,7 @@ void main() {
     });
 
     test('returns responses that arrive in time', () async {
-      final client = clientFor(FakeAdapter((_, __) async => json({'ok': true})), token: valid);
+      final client = clientFor(FakeAdapter((_, _) async => json({'ok': true})), token: valid);
       await client.load();
       expect(await client.get('/api/v1/fast'), {'ok': true});
     });
@@ -114,7 +114,7 @@ void main() {
 
   group('requests', () {
     test('sends the bearer token and JSON body', () async {
-      final adapter = FakeAdapter((_, __) async => json({'id': '1'}));
+      final adapter = FakeAdapter((_, _) async => json({'id': '1'}));
       final client = clientFor(adapter, token: valid);
       await client.load();
       await client.post('/api/v1/channels', body: {'name': 'Tech'});
@@ -127,14 +127,14 @@ void main() {
     });
 
     test('returns null for 204 responses', () async {
-      final client = clientFor(FakeAdapter((_, __) async => ResponseBody.fromString('', 204)), token: valid);
+      final client = clientFor(FakeAdapter((_, _) async => ResponseBody.fromString('', 204)), token: valid);
       await client.load();
       expect(await client.delete('/api/v1/channels/1'), isNull);
     });
 
     test('surfaces the API error message and code', () async {
       final client = clientFor(
-        FakeAdapter((_, __) async => json({'message': 'Slug taken', 'code': 'CONFLICT'}, status: 409)),
+        FakeAdapter((_, _) async => json({'message': 'Slug taken', 'code': 'CONFLICT'}, status: 409)),
         token: valid,
       );
       await client.load();
@@ -148,7 +148,7 @@ void main() {
     });
 
     test('falls back to a generic message when the error body is empty', () async {
-      final client = clientFor(FakeAdapter((_, __) async => ResponseBody.fromString('{}', 500)), token: valid);
+      final client = clientFor(FakeAdapter((_, _) async => ResponseBody.fromString('{}', 500)), token: valid);
       await client.load();
       await expectLater(client.get('/api/v1/x'), throwsA(isA<ApiException>().having((e) => e.message, 'message', 'Request failed')));
     });
@@ -157,7 +157,7 @@ void main() {
   group('session expiry', () {
     test('an expired token signs the user out without calling the API', () async {
       final expired = tokenWith({'exp': 1000});
-      final adapter = FakeAdapter((_, __) async => json({}));
+      final adapter = FakeAdapter((_, _) async => json({}));
       final client = clientFor(adapter, token: expired);
       await client.load();
       var expiredCalls = 0;
@@ -171,7 +171,7 @@ void main() {
 
     test('a 401 AUTH_EXPIRED response signs the user out', () async {
       final client = clientFor(
-        FakeAdapter((_, __) async => json({'message': 'Token expired', 'code': 'AUTH_EXPIRED'}, status: 401)),
+        FakeAdapter((_, _) async => json({'message': 'Token expired', 'code': 'AUTH_EXPIRED'}, status: 401)),
         token: valid,
       );
       await client.load();
@@ -184,7 +184,7 @@ void main() {
 
     test('auth requests never expire the session', () async {
       final client = clientFor(
-        FakeAdapter((_, __) async => json({'message': 'Bad credentials', 'code': 'AUTH_FAILED'}, status: 401)),
+        FakeAdapter((_, _) async => json({'message': 'Bad credentials', 'code': 'AUTH_FAILED'}, status: 401)),
         token: valid,
       );
       await client.load();
@@ -196,7 +196,7 @@ void main() {
     });
 
     test('treats tokens without an expiry claim as valid and missing tokens as expired', () async {
-      final client = clientFor(FakeAdapter((_, __) async => json({})));
+      final client = clientFor(FakeAdapter((_, _) async => json({})));
       await client.load();
       expect(client.isTokenExpired(), isTrue);
       expect(client.isTokenExpired('opaque-token'), isFalse);
