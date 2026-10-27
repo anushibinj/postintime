@@ -23,6 +23,20 @@ String _contentTypeFor(XFile file) {
   return 'image/jpeg';
 }
 
+/// A multipart part without a file name is not treated as a file by the server, so never send one.
+String _filenameFor(XFile file, String contentType) {
+  if (file.name.isNotEmpty) {
+    return file.name;
+  }
+  final extension = switch (contentType) {
+    'image/png' => 'png',
+    'image/gif' => 'gif',
+    'image/webp' => 'webp',
+    _ => 'jpg',
+  };
+  return 'image.$extension';
+}
+
 /// Picks an image from the gallery or camera, uploads it and reports the stored media.
 class MediaUploader extends ConsumerStatefulWidget {
   const MediaUploader({super.key, this.value, this.onChanged});
@@ -77,10 +91,11 @@ class _MediaUploaderState extends ConsumerState<MediaUploader> {
       if (file == null) {
         return;
       }
+      final contentType = _contentTypeFor(file);
       final media = await ref.read(mediaApiProvider).uploadMedia(
             bytes: await file.readAsBytes(),
-            filename: file.name,
-            contentType: _contentTypeFor(file),
+            filename: _filenameFor(file, contentType),
+            contentType: contentType,
           );
       widget.onChanged?.call(media);
       Toast.success(successMessage);
