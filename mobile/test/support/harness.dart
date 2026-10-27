@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:postintime/api/api_client.dart';
 import 'package:postintime/api/token_store.dart';
 import 'package:postintime/app/app.dart';
+import 'package:postintime/app/navigator_keys.dart';
 import 'package:postintime/state/core_providers.dart';
 import 'package:postintime/state/now_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -81,7 +82,7 @@ Future<void> pumpWidgetWithApp(WidgetTester tester, TestApp app, Widget child, {
     ProviderScope(
       retry: (_, _) => null,
       overrides: [...testOverrides(app, prefs), ...extra],
-      child: MaterialApp(home: Scaffold(body: child)),
+      child: MaterialApp(navigatorKey: rootNavigatorKey, home: Scaffold(body: child)),
     ),
   );
   await tester.pumpAndSettle();
