@@ -83,6 +83,9 @@ class ApiClient {
 
   String? get token => _token;
 
+  /// The current time as this client sees it (injectable so tests can fake it).
+  DateTime now() => _clock();
+
   Future<void> setToken(String token) async {
     _token = token;
     await _tokenStore.write(token);

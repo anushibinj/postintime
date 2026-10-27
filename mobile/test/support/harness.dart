@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +54,8 @@ Future<TestApp> createApp({FakeBackend? backend, bool signedIn = true}) async {
     tokenStore: MemoryTokenStore(token),
     baseUrl: 'http://fake.test',
     dio: Dio()..httpClientAdapter = FakeBackendAdapter(fake),
+    // The test clock, so token expiry follows `tester.pump(duration)`.
+    clock: () => clock.now(),
   );
   await client.load();
   return TestApp(fake, client);

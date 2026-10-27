@@ -73,7 +73,7 @@ class AuthController extends Notifier<AuthUser?> {
     if (expiryMs == null) {
       return;
     }
-    final remaining = Duration(milliseconds: expiryMs - DateTime.now().millisecondsSinceEpoch);
+    final remaining = Duration(milliseconds: expiryMs - _client.now().millisecondsSinceEpoch);
     final wait = remaining.isNegative ? Duration.zero : (remaining > _maxTimer ? _maxTimer : remaining);
     _expiryTimer = Timer(wait, () {
       if (_client.isTokenExpired(token)) {
