@@ -41,9 +41,12 @@ void main() {
 
   testWidgets('each post row is one named, tappable item for screen readers', (tester) async {
     final semantics = tester.ensureSemantics();
-    await openChannel(tester, seed: (backend, channelId) {
-      backend.addPost(channelId, title: 'First post', caption: 'Old caption');
-    });
+    await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        backend.addPost(channelId, title: 'First post', caption: 'Old caption');
+      },
+    );
 
     // The row announces its title and caption together, instead of an unnamed button.
     final row = find.bySemanticsLabel(RegExp(r'First post\s+Old caption'));
