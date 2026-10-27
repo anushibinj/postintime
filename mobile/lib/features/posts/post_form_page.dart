@@ -70,6 +70,11 @@ class _PostFormPageState extends ConsumerState<PostFormPage> {
   }
 
   Future<void> _save() async {
+    if (_saving) {
+      return;
+    }
+    // Dismiss the keyboard before the page goes away, so no focused field outlives its route.
+    FocusManager.instance.primaryFocus?.unfocus();
     final title = _title.text.trim();
     if (title.isEmpty) {
       Toast.warning('Add a title before saving');
@@ -94,7 +99,12 @@ class _PostFormPageState extends ConsumerState<PostFormPage> {
         final post = await actions.create(title: title, caption: _caption.text, status: _status, mediaId: _media?.id);
         Toast.success('Post created');
         if (mounted) {
-          context.pushReplacement('/channels/${widget.channelId}/posts/${post.id}');
+          // Close the form, then open the new post over the channel page it was started from.
+          final router = GoRouter.of(context);
+          if (router.canPop()) {
+            router.pop();
+          }
+          router.push('/channels/${widget.channelId}/posts/${post.id}');
         }
       }
     } catch (_) {
