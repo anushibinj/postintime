@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_backend.dart';
@@ -38,7 +39,7 @@ void main() {
     expect(find.text('1-2 of 2 posts'), findsOneWidget);
   });
 
-  testWidgets('each post row is one named button for screen readers', (tester) async {
+  testWidgets('each post row is one named, tappable item for screen readers', (tester) async {
     final semantics = tester.ensureSemantics();
     await openChannel(tester, seed: (backend, channelId) {
       backend.addPost(channelId, title: 'First post', caption: 'Old caption');
@@ -47,7 +48,7 @@ void main() {
     // The row announces its title and caption together, instead of an unnamed button.
     final row = find.bySemanticsLabel(RegExp(r'First post\s+Old caption'));
     expect(row, findsOneWidget);
-    expect(tester.getSemantics(row).flagsCollection.isButton, isTrue);
+    expect(tester.getSemantics(row).getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
     semantics.dispose();
   });
 
