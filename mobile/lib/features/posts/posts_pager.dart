@@ -35,26 +35,27 @@ class PostsPager extends StatelessWidget {
       child: Wrap(
         alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
-        runSpacing: 8,
+        spacing: 12,
+        runSpacing: 4,
         children: [
           Text('$first-$last of $totalItems posts', style: AppText.secondary),
+          DropdownButton<int>(
+            value: size,
+            underline: const SizedBox.shrink(),
+            isDense: true,
+            items: [for (final option in sizes) DropdownMenuItem(value: option, child: Text('$option / page'))],
+            onChanged: (value) {
+              if (value == null || value == size) {
+                return;
+              }
+              // Stay on the same page when it still exists at the new size.
+              final lastPage = math.max(0, (totalItems / value).ceil() - 1);
+              onChange(math.min(page, lastPage), value);
+            },
+          ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButton<int>(
-                value: size,
-                underline: const SizedBox.shrink(),
-                isDense: true,
-                items: [for (final option in sizes) DropdownMenuItem(value: option, child: Text('$option / page'))],
-                onChanged: (value) {
-                  if (value == null || value == size) {
-                    return;
-                  }
-                  // Stay on the same page when it still exists at the new size.
-                  final lastPage = math.max(0, (totalItems / value).ceil() - 1);
-                  onChange(math.min(page, lastPage), value);
-                },
-              ),
               IconButton(
                 tooltip: 'Previous page',
                 onPressed: page > 0 ? () => onChange(page - 1, size) : null,
