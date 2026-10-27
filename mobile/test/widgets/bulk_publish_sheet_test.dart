@@ -114,10 +114,13 @@ void main() {
   });
 
   testWidgets('cannot start without an enabled webhook account', (tester) async {
-    await pumpSheet(tester, accounts: [
-      account(id: 'a1', name: 'Manual IG', mode: PostingMode.manual),
-      account(id: 'a2', name: 'Disabled hook', enabled: false),
-    ]);
+    await pumpSheet(
+      tester,
+      accounts: [
+        account(id: 'a1', name: 'Manual IG', mode: PostingMode.manual),
+        account(id: 'a2', name: 'Disabled hook', enabled: false),
+      ],
+    );
 
     expect(find.text('No webhook social accounts'), findsOneWidget);
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Start bulk posting')).onPressed, isNull);

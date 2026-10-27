@@ -56,8 +56,10 @@ class _BulkPublishSheetState extends ConsumerState<BulkPublishSheet> {
     final enabled = widget.accounts.where((account) => account.enabled).toList();
     final webhookAccounts = enabled.where((account) => account.postingMode == PostingMode.webhook).toList();
     final manualAccounts = enabled.where((account) => account.postingMode == PostingMode.manual).toList();
-    final pickedIds =
-        webhookAccounts.where((account) => !_excludedIds.contains(account.id)).map((account) => account.id).toList();
+    final pickedIds = webhookAccounts
+        .where((account) => !_excludedIds.contains(account.id))
+        .map((account) => account.id)
+        .toList();
     final first = firstSlot(widget.queueTail, _interval, now);
     final last = first.add(Duration(minutes: _interval * (posts.length - 1).clamp(0, 1 << 30)));
     final startsNow = !first.isAfter(now);
@@ -93,34 +95,27 @@ class _BulkPublishSheetState extends ConsumerState<BulkPublishSheet> {
             Text('Bulk post ${posts.length} $plural', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             const Text('Interval between posts', style: TextStyle(fontWeight: FontWeight.w600)),
-            Semantics(
-              label: 'Interval between posts in minutes',
-              child: Slider(
-                min: bulkIntervalMin.toDouble(),
-                max: bulkIntervalMax.toDouble(),
-                divisions: (bulkIntervalMax - bulkIntervalMin) ~/ bulkIntervalStep,
-                value: _interval.toDouble(),
-                label: '$_interval min',
-                onChanged: (value) => setState(() => _interval = normalizeInterval(value)),
+            // The track is inset by the overlay radius, which is pinned here so the labels below can
+            // sit exactly under the slider's stops.
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: _sliderInset),
+                trackShape: const RoundedRectSliderTrackShape(),
+                thumbShape: const RoundSliderThumbShape(),
+              ),
+              child: Semantics(
+                label: 'Interval between posts in minutes',
+                child: Slider(
+                  min: bulkIntervalMin.toDouble(),
+                  max: bulkIntervalMax.toDouble(),
+                  divisions: (bulkIntervalMax - bulkIntervalMin) ~/ bulkIntervalStep,
+                  value: _interval.toDouble(),
+                  label: '$_interval min',
+                  onChanged: (value) => setState(() => _interval = normalizeInterval(value)),
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  for (final mark in intervalMarks().entries)
-                    Text(
-                      mark.value,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: mark.key == _interval ? AppColors.primary : AppColors.secondaryText,
-                        fontWeight: mark.key == _interval ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _IntervalMarks(selected: _interval),
             const SizedBox(height: 16),
             Text(summary.toString(), style: AppText.secondary),
             const SizedBox(height: 16),
@@ -128,7 +123,8 @@ class _BulkPublishSheetState extends ConsumerState<BulkPublishSheet> {
               const AppAlert(
                 type: AlertType.error,
                 title: 'No webhook social accounts',
-                description: "Bulk posting calls each account's webhook. Enable or add a webhook social account "
+                description:
+                    "Bulk posting calls each account's webhook. Enable or add a webhook social account "
                     'for this channel first.',
               )
             else
@@ -189,6 +185,47 @@ class _BulkPublishSheetState extends ConsumerState<BulkPublishSheet> {
   }
 }
 
+/// How far the slider's track is inset from its edges.
+const double _sliderInset = 24;
+
+/// The `5m … 30m` labels, each centred under its stop on the slider.
+class _IntervalMarks extends StatelessWidget {
+  const _IntervalMarks({required this.selected});
+
+  final int selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final marks = intervalMarks().entries.toList();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final step = (constraints.maxWidth - 2 * _sliderInset) / (marks.length - 1);
+        return SizedBox(
+          height: 18,
+          child: Stack(
+            children: [
+              for (var i = 0; i < marks.length; i++)
+                Positioned(
+                  left: _sliderInset + i * step - 20,
+                  width: 40,
+                  child: Text(
+                    marks[i].value,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: marks[i].key == selected ? AppColors.primary : AppColors.secondaryText,
+                      fontWeight: marks[i].key == selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _AccountPicker extends StatelessWidget {
   const _AccountPicker({
     required this.webhookAccounts,
@@ -215,7 +252,9 @@ class _AccountPicker extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Expanded(child: Text('Post to', style: TextStyle(fontWeight: FontWeight.w600))),
+            const Expanded(
+              child: Text('Post to', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
             if (webhookAccounts.length > 1)
               InkWell(
                 onTap: () => onChanged(allPicked ? allIds : <String>{}),

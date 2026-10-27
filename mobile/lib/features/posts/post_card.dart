@@ -107,48 +107,51 @@ class _PostCardState extends ConsumerState<PostCard> {
                   ),
                 ),
               Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(kRadius),
-                  onTap: () => context.push('/channels/${widget.channelId}/posts/${post.id}'),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(widget.onSelectChange != null ? 4 : 12, 12, 12, 12),
-                    child: Row(
-                      children: [
-                        PostThumb(url: post.media?.url, title: post.title),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                post.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                              if (caption != null && caption.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    caption,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppText.secondary,
-                                  ),
+                // One accessible button named after the whole row (title, caption, queue status).
+                child: MergeSemantics(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => context.push('/channels/${widget.channelId}/posts/${post.id}'),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(widget.onSelectChange != null ? 4 : 12, 12, 12, 12),
+                      child: Row(
+                        children: [
+                          PostThumb(url: post.media?.url, title: post.title),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  post.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                                 ),
-                              if (queuedAt != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: AppTag(
-                                    'Queued for posting at ${formatQueuedAt(queuedAt, widget.now)}',
-                                    tone: TagTone.processing,
-                                    icon: Icons.schedule,
+                                if (caption != null && caption.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      caption,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppText.secondary,
+                                    ),
                                   ),
-                                ),
-                            ],
+                                if (queuedAt != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: AppTag(
+                                      'Queued for posting at ${formatQueuedAt(queuedAt, widget.now)}',
+                                      tone: TagTone.processing,
+                                      icon: Icons.schedule,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -210,9 +213,10 @@ class AccountToggle extends StatelessWidget {
     final actionLabel = posted
         ? 'Unmark ${account.name}'
         : webhook
-            ? 'Send webhook for ${account.name}'
-            : 'Mark ${account.name} as posted';
-    final tooltip = '${account.name} · ${webhook ? 'Webhook' : 'Manual'} · ${posted ? 'Posted' : 'Not posted'}'
+        ? 'Send webhook for ${account.name}'
+        : 'Mark ${account.name} as posted';
+    final tooltip =
+        '${account.name} · ${webhook ? 'Webhook' : 'Manual'} · ${posted ? 'Posted' : 'Not posted'}'
         '${locked ? ' · Queued for bulk posting' : ''}';
 
     return Tooltip(
@@ -310,13 +314,7 @@ class PostThumb extends StatelessWidget {
 
 /// A channel's posts as bordered rows, with optional selection for bulk actions.
 class PostList extends ConsumerWidget {
-  const PostList({
-    super.key,
-    required this.posts,
-    required this.channelId,
-    this.selectedIds,
-    this.onSelectChange,
-  });
+  const PostList({super.key, required this.posts, required this.channelId, this.selectedIds, this.onSelectChange});
 
   final List<Post> posts;
   final String channelId;

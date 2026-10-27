@@ -115,46 +115,63 @@ class _ChannelCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          InkWell(
-            onTap: onView,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          channel.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
+          MergeSemantics(
+            child: InkWell(
+              onTap: onView,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            channel.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      AppTag(channel.enabled ? 'Enabled' : 'Disabled', tone: channel.enabled ? TagTone.green : TagTone.neutral),
+                        const SizedBox(width: 8),
+                        AppTag(
+                          channel.enabled ? 'Enabled' : 'Disabled',
+                          tone: channel.enabled ? TagTone.green : TagTone.neutral,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('/${channel.slug}', style: AppText.secondary),
+                    if (description != null && description.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(description, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.secondary),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text('/${channel.slug}', style: AppText.secondary),
-                  if (description != null && description.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(description, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppText.secondary),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${channel.postCount} posts · ${channel.socialAccountCount} social accounts',
+                      style: AppText.secondary,
+                    ),
                   ],
-                  const SizedBox(height: 12),
-                  Text(
-                    '${channel.postCount} posts · ${channel.socialAccountCount} social accounts',
-                    style: AppText.secondary,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
           const Divider(),
           Row(
             children: [
-              Expanded(child: TextButton.icon(onPressed: onView, icon: const Icon(Icons.visibility_outlined, size: 18), label: const Text('View'))),
-              Expanded(child: TextButton.icon(onPressed: onEdit, icon: const Icon(Icons.edit_outlined, size: 18), label: const Text('Edit'))),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onView,
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: const Text('View'),
+                ),
+              ),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit'),
+                ),
+              ),
               Expanded(
                 child: TextButton.icon(
                   onPressed: onDelete,
