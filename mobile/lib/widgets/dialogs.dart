@@ -94,7 +94,13 @@ class SheetScaffold extends StatelessWidget {
                 TextButton(onPressed: loading ? null : () => Navigator.of(context).pop(), child: Text(cancelText)),
                 const SizedBox(width: 8),
                 FilledButton(
-                  onPressed: loading || !okEnabled ? null : onOk,
+                  onPressed: loading || !okEnabled
+                      ? null
+                      : () {
+                          // Close the keyboard first, so a sheet that pops itself leaves no focused field behind.
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          onOk();
+                        },
                   child: loading
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : Text(okText),
