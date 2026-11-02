@@ -16,6 +16,8 @@ interface AuthContextValue {
   logout: () => void;
 }
 
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function userFromToken(token: string): AuthResponse | null {
@@ -82,9 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (expiryMs == null) {
       return;
     }
-    const timeout = window.setTimeout(() => {
-      clearAuthState();
-    }, Math.max(0, expiryMs - Date.now()));
+    // setTimeout stores its delay as a signed 32-bit int (~24.8 days); a longer delay overflows and
+    // fires immediately, which would log the user out right away. Re-arm in chunks instead.
+    let timeout: number;
+    const schedule = () => {
+      const remaining = expiryMs - Date.now();
+      if (remaining <= 0) {
+        clearAuthState();
+        return;
+      }
+      timeout = window.setTimeout(schedule, Math.min(remaining, MAX_TIMEOUT_MS));
+    };
+    schedule();
     return () => window.clearTimeout(timeout);
   }, [user?.token, clearAuthState]);
 
