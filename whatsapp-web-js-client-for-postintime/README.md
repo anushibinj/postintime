@@ -44,6 +44,30 @@ pnpm start
 
 Stop it with `Ctrl+C`.
 
+## Run with Docker
+
+The client is the `whatsapp` service of the postintime `docker compose` stack (repository root):
+
+```bash
+docker compose up -d --build whatsapp
+docker compose logs -f whatsapp
+```
+
+Scan the QR code from the logs. The login is kept in the `whatsapp_session` volume, so restarts and rebuilds
+don't ask again (`docker compose down -v` deletes it). Settings come from the root `.env`:
+
+| Root `.env` | Passed to the client as |
+| --- | --- |
+| `WHATSAPP_HOST_PORT` (default `3000`) | Host port mapped to the container's port 3000 |
+| `WHATSAPP_CHANNEL_ID` / `WHATSAPP_CHANNEL_INVITE_CODE` | Same names (optional default channel) |
+| `WHATSAPP_WEBHOOK_USERNAME` / `WHATSAPP_WEBHOOK_PASSWORD` | `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD` |
+
+Inside the stack the backend reaches the client at `http://whatsapp:3000/webhooks/post-to-channel/<channel id>`.
+The container reports healthy once WhatsApp is logged in and the webhook server is up.
+
+On its own: `docker build -t postintime-whatsapp .` then
+`docker run -it -p 3000:3000 -v postintime-whatsapp:/data postintime-whatsapp`.
+
 ## Connect postintime
 
 In postintime, open the channel's **Social accounts**, add (or edit) an account with posting mode **Webhook**
@@ -53,7 +77,8 @@ and set the webhook URL to:
 http://<host running this client>:3000/webhooks/post-to-channel/<channel id>
 ```
 
-for example `http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter`. The
+for example `http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter`
+(`http://whatsapp:3000/...` when both run in the docker compose stack). The
 `@newsletter` part may be left out. Use one social account per WhatsApp channel, each with its own URL.
 
 If you set `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD` in `.env`, choose **Basic** auth on the social account and
