@@ -28,7 +28,7 @@ import java.util.UUID;
 public class BulkPublishService {
 
     public static final int DEFAULT_INTERVAL_MINUTES = 5;
-    public static final int MIN_INTERVAL_MINUTES = 5;
+    public static final int MIN_INTERVAL_MINUTES = 0;
     public static final int MAX_INTERVAL_MINUTES = 30;
     public static final int INTERVAL_STEP_MINUTES = 5;
 

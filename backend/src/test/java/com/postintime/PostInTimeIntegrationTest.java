@@ -567,7 +567,7 @@ class PostInTimeIntegrationTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         }
-        for (int interval : new int[]{0, 7, 35}) {
+        for (int interval : new int[]{-5, 7, 35}) {
             mockMvc.perform(post(base)
                             .header("Authorization", "Bearer " + user1Token)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -704,6 +704,49 @@ class PostInTimeIntegrationTest {
 
             assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
             assertThat(received).containsExactly("/picked");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void bulkPublishWithZeroIntervalPostsBackToBackInOrder() throws Exception {
+        java.util.List<String> received = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", exchange -> {
+            String body = new String(exchange.getRequestBody().readAllBytes());
+            received.add(body.replaceAll("(?s).*(Zero [A-Z]).*", "$1"));
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        jdbcTemplate.update("UPDATE bulk_publish_items SET status = 'CANCELLED' WHERE status = 'PENDING'");
+        try {
+            UUID account = createWebhookAccount(techChannelId, "Zero hook",
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/zero");
+            UUID a = createPost(user1Token, techChannelId, "Zero A");
+            UUID b = createPost(user1Token, techChannelId, "Zero B");
+            UUID c = createPost(user1Token, techChannelId, "Zero C");
+            UUID d = createPost(user1Token, techChannelId, "Zero D");
+            String base = "/api/v1/channels/" + techChannelId + "/bulk-publish-jobs";
+
+            mockMvc.perform(post(base).header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(0, new UUID[]{account}, b, a)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.intervalMinutes").value(0));
+            // A second batch joins the end of the queue, still with no wait in between.
+            mockMvc.perform(post(base).header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(bulkBody(0, new UUID[]{account}, d, c)))
+                    .andExpect(status().isCreated());
+
+            for (int i = 0; i < 4; i++) {
+                assertThat(bulkPublishProcessor.processNextDueItem()).isTrue();
+            }
+            assertThat(bulkPublishProcessor.processNextDueItem()).isFalse();
+            assertThat(received).containsExactly("Zero B", "Zero A", "Zero D", "Zero C");
         } finally {
             server.stop(0);
         }

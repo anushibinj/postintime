@@ -18,6 +18,7 @@ public interface BulkPublishItemRepository extends JpaRepository<BulkPublishItem
      * Locks the earliest due queued post together with its job. SKIP LOCKED keeps two backend
      * instances from claiming the same post, and skips a job that is being cancelled. Channels
      * with a post being published right now are skipped so a channel never posts in parallel.
+     * Posts sharing a slot (0 minute interval) go out batch by batch, then in their batch order.
      */
     @Query(value = """
             SELECT i.* FROM bulk_publish_items i
@@ -27,7 +28,7 @@ public interface BulkPublishItemRepository extends JpaRepository<BulkPublishItem
                   SELECT 1 FROM bulk_publish_items busy
                   JOIN bulk_publish_jobs busy_job ON busy_job.id = busy.job_id
                   WHERE busy_job.channel_id = j.channel_id AND busy.status = 'PUBLISHING')
-            ORDER BY i.scheduled_at, i.position
+            ORDER BY i.scheduled_at, j.created_at, j.id, i.position
             LIMIT 1
             FOR UPDATE OF i, j SKIP LOCKED
             """, nativeQuery = true)
@@ -36,7 +37,7 @@ public interface BulkPublishItemRepository extends JpaRepository<BulkPublishItem
     @Query("""
             SELECT i FROM BulkPublishItem i JOIN FETCH i.job j
             WHERE j.channel.id = :channelId AND i.status = :status
-            ORDER BY i.scheduledAt, i.position
+            ORDER BY i.scheduledAt, j.createdAt, j.id, i.position
             """)
     List<BulkPublishItem> findQueue(@Param("channelId") UUID channelId,
                                     @Param("status") BulkPublishItemStatus status);

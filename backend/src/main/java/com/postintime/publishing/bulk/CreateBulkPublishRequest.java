@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /**
  * @param postIds          posts to publish, in publishing order
- * @param intervalMinutes  minutes between posts; 5 to 30 in steps of 5, defaults to 5
+ * @param intervalMinutes  minutes between posts; 0 to 30 in steps of 5 (0 posts back to back), defaults to 5
  * @param socialAccountIds enabled webhook accounts of the channel to post to; defaults to all of them
  */
 public record CreateBulkPublishRequest(
