@@ -14,6 +14,12 @@ The `frontend/` app uses **pnpm** exclusively (see `frontend/pnpm-lock.yaml`). D
 if invoked via `npm install`/`yarn install`. `frontend/.gitignore` also excludes `package-lock.json`
 and `yarn.lock` so they can't be committed by accident.
 
+## WhatsApp client
+
+`whatsapp-web-js-client-for-postintime/` is a Node (pnpm) webhook receiver built on whatsapp-web.js. Run
+`pnpm install`, `pnpm test` and `pnpm start` from that folder. If the webhook body postintime sends changes
+(`WebhookSocialMediaPublisher`), update its `src/server.js` and tests too.
+
 ## Mobile app
 
 `mobile/` is a Flutter client that mirrors `frontend/`. Run these from `mobile/`:
