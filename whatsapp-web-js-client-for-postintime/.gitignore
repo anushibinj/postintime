@@ -1,0 +1,7 @@
+node_modules/
+.env
+# WhatsApp session data (LocalAuth) and cached WhatsApp Web versions
+.wwebjs_auth/
+.wwebjs_cache/
+package-lock.json
+yarn.lock

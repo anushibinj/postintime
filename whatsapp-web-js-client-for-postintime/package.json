@@ -1,0 +1,28 @@
+{
+  "name": "whatsapp-web-js-client-for-postintime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhatsApp client (whatsapp-web.js) that receives postintime webhook calls and posts them to a WhatsApp channel",
+  "type": "module",
+  "main": "src/index.js",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "preinstall": "node -e \"if (!/pnpm/.test(process.env.npm_execpath || '')) { console.error('\\nThis project uses pnpm. Run: pnpm install\\n'); process.exit(1); }\"",
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "puppeteer"
+    ]
+  }
+}
