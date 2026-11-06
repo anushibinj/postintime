@@ -26,7 +26,8 @@ export function startWhatsAppClient({ sessionDir, headless, puppeteerExecutableP
       logger.log('\nScan this QR code with WhatsApp (Settings > Linked devices > Link a device):\n');
       qrcode.generate(qr, { small: true });
     });
-    client.on('authenticated', () => logger.log('WhatsApp login accepted, loading chats…'));
+    // whatsapp-web.js can fire 'authenticated' several times while it loads; say it once.
+    client.once('authenticated', () => logger.log('WhatsApp login accepted, loading chats…'));
     client.on('auth_failure', (message) => reject(new Error(`WhatsApp login failed: ${message}`)));
     client.on('disconnected', (reason) => logger.error(`WhatsApp disconnected: ${reason}`));
     client.once('ready', () => resolve(client));
