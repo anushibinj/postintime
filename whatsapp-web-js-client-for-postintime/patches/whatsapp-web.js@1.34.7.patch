@@ -1,5 +1,5 @@
 diff --git a/src/util/Injected/Utils.js b/src/util/Injected/Utils.js
-index 540078a9d07b3df07ccd51b030556a72af4cf650..f0630cc1966ee6ac19f58982dfbb849e4b288a9b 100644
+index 540078a9d07b3df07ccd51b030556a72af4cf650..235c106a2dd0644143d52703805f391f462fc83d 100644
 --- a/src/util/Injected/Utils.js
 +++ b/src/util/Injected/Utils.js
 @@ -483,6 +483,12 @@ exports.LoadUtils = () => {
@@ -15,3 +15,19 @@ index 540078a9d07b3df07ccd51b030556a72af4cf650..f0630cc1966ee6ac19f58982dfbb849e
          // Bot's won't reply if canonicalUrl is set (linking)
          if (botOptions) {
              delete message.canonicalUrl;
+@@ -515,7 +521,14 @@ exports.LoadUtils = () => {
+                     newsletterJid: chat.id.toJid(),
+                     ...(isMedia
+                         ? {
+-                              mediaMetadata: msg.avParams(),
++                              // postintime patch (upstream wwebjs/whatsapp-web.js#201824): WhatsApp Web
++                              // removed Msg.avParams(); WAWebMediaMetadata.mediaMetadata(msg) replaces it.
++                              mediaMetadata:
++                                  typeof msg.avParams === 'function'
++                                      ? msg.avParams()
++                                      : window
++                                            .require('WAWebMediaMetadata')
++                                            .mediaMetadata(msg),
+                               mediaHandle: isMedia
+                                   ? mediaOptions.mediaHandle
+                                   : null,
