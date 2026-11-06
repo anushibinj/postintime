@@ -56,9 +56,9 @@ describe('logChannels', () => {
 
   it('waits for channels that load after the client is ready', async () => {
     const { logChannels } = await import('../src/whatsapp.js');
-    const results = [[], [], [{ id: { _serialized: '123@newsletter' }, name: 'News' }]];
+    const results = [[], [], [{ id: '123@newsletter', name: 'News' }]];
     let calls = 0;
-    const client = { getChannels: async () => results[calls++] };
+    const client = { pupPage: { evaluate: async () => results[calls++] } };
     const logger = fakeLogger();
 
     await logChannels(client, { logger, attempts: 5, intervalMs: 1 });
@@ -71,9 +71,11 @@ describe('logChannels', () => {
     const { logChannels } = await import('../src/whatsapp.js');
     let calls = 0;
     const client = {
-      getChannels: async () => {
-        calls++;
-        return [];
+      pupPage: {
+        evaluate: async () => {
+          calls++;
+          return [];
+        },
       },
     };
     const logger = fakeLogger();

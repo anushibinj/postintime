@@ -73,16 +73,31 @@ export function inviteCodeFrom(value) {
 }
 
 /**
+ * Reads the id and name of each channel WhatsApp Web has loaded. client.getChannels() also refreshes every
+ * channel's metadata through WhatsApp Web internals, which can throw; listing needs none of that.
+ */
+export async function listChannels(client) {
+  return client.pupPage.evaluate(() => {
+    const collections = window.require('WAWebCollections');
+    const newsletters = collections.WAWebNewsletterCollection ?? collections.Newsletter;
+    return (newsletters?.getModelsArray() ?? []).map((channel) => ({
+      id: channel.id?._serialized,
+      name: channel.name ?? channel.newsletterMetadata?.name ?? '',
+    }));
+  });
+}
+
+/**
  * Prints the channels this account follows or owns, to help fill in the webhook URL.
  *
- * whatsapp-web.js only returns channels WhatsApp Web has already cached, and that cache usually fills in a
- * few seconds after the client is ready, so keep asking for a while before deciding there are none.
+ * WhatsApp Web loads channels a few seconds after the client is ready, so keep asking for a while before
+ * deciding there are none.
  */
 export async function logChannels(client, { logger = console, attempts = 20, intervalMs = 3000 } = {}) {
   try {
     let channels = [];
     for (let attempt = 1; attempt <= attempts; attempt++) {
-      channels = await client.getChannels();
+      channels = await listChannels(client);
       if (channels.length > 0 || attempt === attempts) {
         break;
       }
@@ -97,9 +112,9 @@ export async function logChannels(client, { logger = console, attempts = 20, int
     }
     logger.log('Channels on this WhatsApp account:');
     for (const channel of channels) {
-      logger.log(`  ${channel.id._serialized}  ${channel.name}`);
+      logger.log(`  ${channel.id}  ${channel.name}`);
     }
   } catch (error) {
-    logger.error('Could not list WhatsApp channels:', error?.message ?? error);
+    logger.error('Could not list WhatsApp channels:', error?.stack ?? error?.message ?? error);
   }
 }
