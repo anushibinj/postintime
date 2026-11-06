@@ -71,11 +71,27 @@ export function inviteCodeFrom(value) {
   return match ? match[1] : value;
 }
 
-/** Prints the channels this account follows or owns, to help fill in WHATSAPP_CHANNEL_ID. */
-export async function logChannels(client, logger = console) {
+/**
+ * Prints the channels this account follows or owns, to help fill in the webhook URL.
+ *
+ * whatsapp-web.js only returns channels WhatsApp Web has already cached, and that cache usually fills in a
+ * few seconds after the client is ready, so keep asking for a while before deciding there are none.
+ */
+export async function logChannels(client, { logger = console, attempts = 20, intervalMs = 3000 } = {}) {
   try {
-    const channels = await client.getChannels();
+    let channels = [];
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      channels = await client.getChannels();
+      if (channels.length > 0 || attempt === attempts) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
     if (channels.length === 0) {
+      logger.log(
+        'No WhatsApp channels found on this account yet. Open the channel once in WhatsApp on your phone, ' +
+          'or set WHATSAPP_CHANNEL_INVITE_CODE to the channel link to look its id up.',
+      );
       return;
     }
     logger.log('Channels on this WhatsApp account:');

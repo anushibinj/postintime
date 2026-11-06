@@ -47,3 +47,40 @@ describe('removeStaleChromeLocks', () => {
     assert.deepEqual(readdirSync(join(dir, 'session')), ['Local State']);
   });
 });
+
+describe('logChannels', () => {
+  const fakeLogger = () => {
+    const lines = [];
+    return { lines, log: (...args) => lines.push(args.join(' ')), error: (...args) => lines.push(args.join(' ')) };
+  };
+
+  it('waits for channels that load after the client is ready', async () => {
+    const { logChannels } = await import('../src/whatsapp.js');
+    const results = [[], [], [{ id: { _serialized: '123@newsletter' }, name: 'News' }]];
+    let calls = 0;
+    const client = { getChannels: async () => results[calls++] };
+    const logger = fakeLogger();
+
+    await logChannels(client, { logger, attempts: 5, intervalMs: 1 });
+
+    assert.equal(calls, 3);
+    assert.deepEqual(logger.lines, ['Channels on this WhatsApp account:', '  123@newsletter  News']);
+  });
+
+  it('says so when no channels show up', async () => {
+    const { logChannels } = await import('../src/whatsapp.js');
+    let calls = 0;
+    const client = {
+      getChannels: async () => {
+        calls++;
+        return [];
+      },
+    };
+    const logger = fakeLogger();
+
+    await logChannels(client, { logger, attempts: 3, intervalMs: 1 });
+
+    assert.equal(calls, 3);
+    assert.match(logger.lines[0], /No WhatsApp channels found/);
+  });
+});

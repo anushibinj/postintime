@@ -8,7 +8,8 @@ async function main() {
   console.log('Starting WhatsApp…');
   const client = await startWhatsAppClient(config);
   console.log('WhatsApp is ready.');
-  await logChannels(client);
+  // Channels can take a while to load; list them in the background so the webhook server starts now.
+  logChannels(client);
 
   const defaultChannelId = await resolveChannelId(client, config);
   if (defaultChannelId) {
