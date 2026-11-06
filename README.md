@@ -82,8 +82,8 @@ want to look around. See [mobile/README.md](./mobile/README.md) for details.
 ### WhatsApp channel client (optional)
 
 [`whatsapp-web-js-client-for-postintime/`](./whatsapp-web-js-client-for-postintime) logs in to WhatsApp
-with a QR code (via [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js)) and posts the caption of
-each webhook call to a WhatsApp channel. It runs as the `whatsapp` service of `docker compose`:
+with a QR code (via [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js)) and posts the image and
+caption of each webhook call to a WhatsApp channel. It runs as the `whatsapp` service of `docker compose`:
 
 1. `docker compose logs -f whatsapp` and scan the QR code with WhatsApp (**Settings > Linked devices**). The
    login is kept in the `whatsapp_session` volume, so this is needed only once.
