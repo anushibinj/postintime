@@ -165,6 +165,37 @@ describe('default channel', () => {
   });
 });
 
+describe('while WhatsApp is starting', () => {
+  it('answers webhook calls with 503 instead of dropping them, then sends once ready', async () => {
+    const sent = [];
+    let ready = false;
+    let defaultChannelId;
+    const { server, base, url } = await startServer({
+      postToChannel: async (channelId, text) => sent.push([channelId, text]),
+      isReady: () => ready,
+      defaultChannelId: () => defaultChannelId,
+    });
+    try {
+      const health = await fetch(base.replace('/webhooks/post-to-channel', '/health'));
+      assert.deepEqual(await health.json(), { status: 'ok', whatsapp: 'starting' });
+
+      const early = await fetch(url, { method: 'POST', body: postintimeForm({ caption: 'Too early' }) });
+      assert.equal(early.status, 503);
+      assert.equal(early.headers.get('retry-after'), '30');
+      assert.equal((await early.json()).error, 'WHATSAPP_NOT_READY');
+      assert.deepEqual(sent, []);
+
+      ready = true;
+      defaultChannelId = 'default@newsletter';
+      const later = await fetch(base, { method: 'POST', body: postintimeForm({ caption: 'Now' }) });
+      assert.equal(later.status, 200);
+      assert.deepEqual(sent, [['default@newsletter', 'Now']]);
+    } finally {
+      server.close();
+    }
+  });
+});
+
 describe('toChannelId', () => {
   it('keeps full ids and trims', () => {
     assert.equal(toChannelId(' 123@newsletter '), '123@newsletter');

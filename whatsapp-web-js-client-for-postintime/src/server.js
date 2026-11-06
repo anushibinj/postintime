@@ -26,19 +26,26 @@ const discardStorage = {
  *
  * @param {object} options
  * @param {(channelId: string, text: string) => Promise<void>} options.postToChannel sends text to a WhatsApp channel
- * @param {string} [options.defaultChannelId] channel used when the URL has no channel id
+ * @param {string | (() => string | undefined)} [options.defaultChannelId] channel used when the URL has no channel id
+ * @param {() => boolean} [options.isReady] false while WhatsApp is still starting; webhook calls then get a 503
  * @param {string} [options.webhookUsername] when set, requests need HTTP Basic auth
  * @param {string} [options.webhookPassword]
  * @param {Pick<Console, 'log' | 'error'>} [options.logger]
  */
-export function createApp({ postToChannel, defaultChannelId, webhookUsername, webhookPassword = '', logger = console }) {
+export function createApp({
+  postToChannel,
+  defaultChannelId,
+  isReady = () => true,
+  webhookUsername, webhookPassword = '',
+  logger = console,
+}) {
   const app = express();
   // postintime sends multipart/form-data (media, title, caption). JSON and form-urlencoded
   // bodies are accepted too, which makes testing with curl easier.
   const upload = multer({ storage: discardStorage, limits: { fields: 20, files: 5 } });
 
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', whatsapp: isReady() ? 'ready' : 'starting' });
   });
 
   app.post(
@@ -49,7 +56,16 @@ export function createApp({ postToChannel, defaultChannelId, webhookUsername, we
     express.json({ limit: '1mb' }),
     express.urlencoded({ extended: false, limit: '1mb' }),
     async (req, res) => {
-      const channelId = req.params.channelId ? toChannelId(req.params.channelId) : defaultChannelId;
+      if (!isReady()) {
+        res.set('Retry-After', '30');
+        res.status(503).json({
+          error: 'WHATSAPP_NOT_READY',
+          message: 'WhatsApp is still starting (or waiting for the QR code to be scanned). Try again shortly.',
+        });
+        return;
+      }
+      const fallbackChannelId = typeof defaultChannelId === 'function' ? defaultChannelId() : defaultChannelId;
+      const channelId = req.params.channelId ? toChannelId(req.params.channelId) : fallbackChannelId;
       if (!channelId) {
         res.status(400).json({
           error: 'CHANNEL_REQUIRED',
