@@ -2,7 +2,7 @@
 
 A small WhatsApp client built on [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js). It logs in to
 your WhatsApp account, then listens for postintime webhook calls and posts each post's **caption** as a text
-message to one of your WhatsApp **channels**.
+message to a WhatsApp **channel** named in the webhook URL.
 
 > whatsapp-web.js drives WhatsApp Web in a headless Chrome. It is not an official WhatsApp API, and WhatsApp
 > may block accounts that use unofficial clients. Use an account you can afford to lose.
@@ -11,7 +11,7 @@ message to one of your WhatsApp **channels**.
 
 - Node.js 20.6 or newer
 - pnpm (`corepack enable`)
-- A WhatsApp channel that you **own or are an admin of** (only admins can post to a channel)
+- WhatsApp channels that you **own or are an admin of** (only admins can post to a channel)
 
 ## Setup
 
@@ -20,12 +20,14 @@ pnpm install
 cp .env.example .env
 ```
 
-In `.env`, set the channel to post to, either:
+The channel to post to goes in the webhook URL (see below). The client prints the ids of your channels
+(`120363000000000000@newsletter`) after it logs in.
 
+Optionally, set a default channel in `.env` for webhook calls whose URL has no channel id, either:
+
+- `WHATSAPP_CHANNEL_ID`: the channel id, or
 - `WHATSAPP_CHANNEL_INVITE_CODE`: the channel's link from **Channel info > Share**, e.g.
-  `https://whatsapp.com/channel/0029Va...` (the bare code after `/channel/` works too), or
-- `WHATSAPP_CHANNEL_ID`: the channel id, e.g. `120363000000000000@newsletter`. The client prints the ids of
-  your channels after it logs in.
+  `https://whatsapp.com/channel/0029Va...` (the bare code after `/channel/` works too).
 
 ## Run
 
@@ -38,7 +40,7 @@ pnpm start
 2. The login is saved in `.wwebjs_auth/`, so later starts log in without a QR code. Delete that folder to log
    out and link again.
 3. Once WhatsApp is ready, the webhook server starts:
-   `Listening for postintime webhooks on http://0.0.0.0:3000/webhooks/post-to-channel`
+   `Listening for postintime webhooks on http://0.0.0.0:3000/webhooks/post-to-channel/<channel id>`
 
 Stop it with `Ctrl+C`.
 
@@ -48,15 +50,21 @@ In postintime, open the channel's **Social accounts**, add (or edit) an account 
 and set the webhook URL to:
 
 ```
-http://<host running this client>:3000/webhooks/post-to-channel
+http://<host running this client>:3000/webhooks/post-to-channel/<channel id>
 ```
+
+for example `http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter`. The
+`@newsletter` part may be left out. Use one social account per WhatsApp channel, each with its own URL.
 
 If you set `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD` in `.env`, choose **Basic** auth on the social account and
 enter the same username and password.
 
 ## Webhook
 
-### `POST /webhooks/post-to-channel`
+### `POST /webhooks/post-to-channel/{channelId}`
+
+Posts to the channel `channelId` (`120363000000000000@newsletter`, or just `120363000000000000`).
+`POST /webhooks/post-to-channel` without an id posts to the default channel from `.env`.
 
 Accepts the multipart form data postintime sends (`media`, `title`, `caption`), and also JSON or
 form-urlencoded bodies. Only `caption` is used: it is sent as a text message to the channel. `media` and
@@ -66,6 +74,7 @@ form-urlencoded bodies. Only `caption` is used: it is sent as a text message to 
 | --- | --- |
 | `200 {"status":"sent"}` | The caption was posted to the channel |
 | `400 CAPTION_REQUIRED` | `caption` is missing or blank |
+| `400 CHANNEL_REQUIRED` | The URL has no channel id and no default channel is set |
 | `401 UNAUTHORIZED` | Basic auth is on and the credentials are missing or wrong |
 | `502 WHATSAPP_SEND_FAILED` | WhatsApp refused the message (the reason is in `message`) |
 
@@ -74,7 +83,7 @@ postintime shows non-2xx responses as a failed post, with the response body.
 Try it with curl:
 
 ```bash
-curl -F title=Test -F caption='Hello from postintime' http://localhost:3000/webhooks/post-to-channel
+curl -F title=Test -F caption='Hello from postintime' http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter
 ```
 
 `GET /health` returns `{"status":"ok"}`.
@@ -83,8 +92,8 @@ curl -F title=Test -F caption='Hello from postintime' http://localhost:3000/webh
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `WHATSAPP_CHANNEL_ID` | | Channel id to post to (`...@newsletter`) |
-| `WHATSAPP_CHANNEL_INVITE_CODE` | | Channel invite link or code, used when no id is set |
+| `WHATSAPP_CHANNEL_ID` | | Default channel id (`...@newsletter`), for URLs without a channel id |
+| `WHATSAPP_CHANNEL_INVITE_CODE` | | Default channel invite link or code, used when no default id is set |
 | `PORT` | `3000` | Webhook server port |
 | `HOST` | `0.0.0.0` | Address the webhook server listens on |
 | `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD` | | Turn on HTTP Basic auth for the webhook |
