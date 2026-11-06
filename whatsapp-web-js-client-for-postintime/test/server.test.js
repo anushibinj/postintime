@@ -16,10 +16,12 @@ function startServer(options) {
 }
 
 /** The multipart body postintime sends: media (optional), title, caption. */
+const IMAGE = Buffer.alloc(1024, 1);
+
 function postintimeForm({ caption, withMedia = true }) {
   const form = new FormData();
   if (withMedia) {
-    form.append('media', new Blob([Buffer.alloc(1024, 1)], { type: 'image/png' }), 'photo.png');
+    form.append('media', new Blob([IMAGE], { type: 'image/png' }), 'photo.png');
   }
   form.append('title', 'My title');
   if (caption !== undefined) {
@@ -30,6 +32,7 @@ function postintimeForm({ caption, withMedia = true }) {
 
 describe('POST /webhooks/post-to-channel/:channelId', () => {
   let sent;
+  let media;
   let failNext;
   let server;
   let base;
@@ -37,32 +40,55 @@ describe('POST /webhooks/post-to-channel/:channelId', () => {
 
   before(async () => {
     ({ server, base, url } = await startServer({
-      postToChannel: async (channelId, text) => {
+      postToChannel: async (channelId, text, file) => {
         if (failNext) {
           failNext = false;
           throw new Error('not an admin of this channel');
         }
         sent.push([channelId, text]);
+        media.push(file);
       },
     }));
   });
   after(() => server.close());
   beforeEach(() => {
     sent = [];
+    media = [];
     failNext = false;
   });
 
-  it('sends the caption from postintime multipart form data', async () => {
+  it('sends the image with the caption from postintime multipart form data', async () => {
     const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption: 'Hello *channel*\nline 2' }) });
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { status: 'sent' });
     assert.deepEqual(sent, [[CHANNEL, 'Hello *channel*\nline 2']]);
+    assert.equal(media.length, 1);
+    assert.equal(media[0].mimetype, 'image/png');
+    assert.equal(media[0].filename, 'photo.png');
+    assert.ok(media[0].data.equals(IMAGE));
   });
 
-  it('works when the post has no media', async () => {
+  it('sends text only when the post has no media', async () => {
     const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption: 'Text only', withMedia: false }) });
     assert.equal(res.status, 200);
     assert.deepEqual(sent, [[CHANNEL, 'Text only']]);
+    assert.deepEqual(media, [undefined]);
+  });
+
+  it('sends the image alone when the caption is blank', async () => {
+    const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption: '' }) });
+    assert.equal(res.status, 200);
+    assert.deepEqual(sent, [[CHANNEL, '']]);
+    assert.equal(media[0].filename, 'photo.png');
+  });
+
+  it('ignores an empty media file', async () => {
+    const form = new FormData();
+    form.append('media', new Blob([], { type: 'image/png' }), 'empty.png');
+    form.append('caption', 'Hi');
+    const res = await fetch(url, { method: 'POST', body: form });
+    assert.equal(res.status, 200);
+    assert.deepEqual(media, [undefined]);
   });
 
   it('accepts a JSON body', async () => {
@@ -93,9 +119,9 @@ describe('POST /webhooks/post-to-channel/:channelId', () => {
     assert.deepEqual(sent, []);
   });
 
-  it('rejects a missing or blank caption', async () => {
+  it('rejects a missing or blank caption when there is no media', async () => {
     for (const caption of [undefined, '   ']) {
-      const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption }) });
+      const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption, withMedia: false }) });
       assert.equal(res.status, 400);
       assert.equal((await res.json()).error, 'CAPTION_REQUIRED');
     }

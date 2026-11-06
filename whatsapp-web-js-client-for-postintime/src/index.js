@@ -1,9 +1,11 @@
+import whatsappWeb from 'whatsapp-web.js';
 import { loadConfig } from './config.js';
 import { createApp } from './server.js';
 import { logChannels, resolveChannelId, startWhatsAppClient } from './whatsapp.js';
 
 // Longer than the 30 second idle timeout of Java's HttpClient connection pool.
 const KEEP_ALIVE_TIMEOUT_MS = 65 * 1000;
+const { MessageMedia } = whatsappWeb;
 
 async function main() {
   const config = loadConfig();
@@ -14,8 +16,18 @@ async function main() {
   // If nothing listened on the port meanwhile, Docker's port mapping would accept postintime's
   // connection and close it with no reply ("header parser received no bytes"). Now it gets a 503.
   const app = createApp({
-    postToChannel: async (channelId, text) => {
-      await client.sendMessage(channelId, text);
+    postToChannel: async (channelId, text, media) => {
+      if (media) {
+        // Post the image with the caption under it, like posting a photo in the WhatsApp app.
+        const attachment = new MessageMedia(media.mimetype, media.data.toString('base64'), media.filename);
+        const sent = await client.sendMessage(channelId, attachment, text ? { caption: text } : {});
+        // whatsapp-web.js returns null (and only logs a warning) for media types channels don't support.
+        if (!sent) {
+          throw new Error(`WhatsApp channels do not accept ${media.mimetype} media.`);
+        }
+      } else {
+        await client.sendMessage(channelId, text);
+      }
     },
     isReady: () => client !== undefined,
     defaultChannelId: () => defaultChannelId,

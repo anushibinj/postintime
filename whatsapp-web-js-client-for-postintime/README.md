@@ -1,8 +1,9 @@
 # whatsapp-web-js-client-for-postintime
 
 A small WhatsApp client built on [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js). It logs in to
-your WhatsApp account, then listens for postintime webhook calls and posts each post's **caption** as a text
-message to a WhatsApp **channel** named in the webhook URL.
+your WhatsApp account, then listens for postintime webhook calls and posts each post's **image** with its
+**caption** (or just the caption, as a text message, when the post has no image) to a WhatsApp **channel**
+named in the webhook URL.
 
 > whatsapp-web.js drives WhatsApp Web in a headless Chrome. It is not an official WhatsApp API, and WhatsApp
 > may block accounts that use unofficial clients. Use an account you can afford to lose.
@@ -94,13 +95,16 @@ Posts to the channel `channelId` (`120363000000000000@newsletter`, or just `1203
 `POST /webhooks/post-to-channel` without an id posts to the default channel from `.env`.
 
 Accepts the multipart form data postintime sends (`media`, `title`, `caption`), and also JSON or
-form-urlencoded bodies. Only `caption` is used: it is sent as a text message to the channel. `media` and
-`title` are ignored for now.
+form-urlencoded bodies. When `media` holds a file (postintime sends the post's image there), it is posted to the
+channel as an image with `caption` as its caption; the caption may then be blank. Without media, `caption` is
+sent as a text message. `title` is ignored. Files up to 64 MB are accepted, but WhatsApp refuses images over
+16 MB.
 
 | Response | When |
 | --- | --- |
-| `200 {"status":"sent"}` | The caption was posted to the channel |
-| `400 CAPTION_REQUIRED` | `caption` is missing or blank |
+| `200 {"status":"sent"}` | The image and/or caption was posted to the channel |
+| `400 CAPTION_REQUIRED` | There is no media and `caption` is missing or blank |
+| `400 BAD_REQUEST` | The multipart body is malformed, or the media file is over 64 MB |
 | `400 CHANNEL_REQUIRED` | The URL has no channel id and no default channel is set |
 | `401 UNAUTHORIZED` | Basic auth is on and the credentials are missing or wrong |
 | `502 WHATSAPP_SEND_FAILED` | WhatsApp refused the message (the reason is in `message`) |
@@ -112,6 +116,12 @@ Try it with curl:
 
 ```bash
 curl -F title=Test -F caption='Hello from postintime' http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter
+```
+
+With an image:
+
+```bash
+curl -F media=@photo.jpg -F title=Test -F caption='Hello from postintime' http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter
 ```
 
 `GET /health` returns `200 {"status":"ok"}` once WhatsApp is logged in, and `503 {"status":"starting"}` before.
