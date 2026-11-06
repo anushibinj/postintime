@@ -81,6 +81,26 @@ services:
       backend:
         condition: service_healthy
 
+  # WhatsApp channel client (whatsapp-web.js). Log in once by scanning the QR code in
+  # `docker compose logs -f whatsapp`. postintime webhook URL: http://whatsapp:3000/webhooks/post-to-channel/<channel id>
+  whatsapp:
+    build:
+      context: ./whatsapp-web-js-client-for-postintime
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${WHATSAPP_HOST_PORT:-3000}:3000"
+    environment:
+      PORT: 3000
+      WHATSAPP_CHANNEL_ID: ${WHATSAPP_CHANNEL_ID:-}
+      WHATSAPP_CHANNEL_INVITE_CODE: ${WHATSAPP_CHANNEL_INVITE_CODE:-}
+      WEBHOOK_USERNAME: ${WHATSAPP_WEBHOOK_USERNAME:-}
+      WEBHOOK_PASSWORD: ${WHATSAPP_WEBHOOK_PASSWORD:-}
+      WHATSAPP_SESSION_DIR: /data/session
+    volumes:
+      - whatsapp_session:/data
+
 volumes:
   postgres_data:
   minio_data:
+  whatsapp_session:
