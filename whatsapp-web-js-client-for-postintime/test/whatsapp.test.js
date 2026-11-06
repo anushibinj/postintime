@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { describe, it } from 'node:test';
-import { waitForReady } from '../src/whatsapp.js';
+import { resolveChannelId, waitForReady } from '../src/whatsapp.js';
 
 function recordingLogger() {
   const lines = [];
@@ -66,5 +66,42 @@ describe('waitForReady', () => {
     const init = waitForReady(failedInit, { timeoutMs: 1000, logger: recordingLogger() });
     failedInit.emit('init_failure', new Error('Chrome did not start'));
     await assert.rejects(init, /Chrome did not start/);
+  });
+});
+
+describe('resolveChannelId', () => {
+  const brokenLookup = {
+    getChannelByInviteCode: async () => {
+      throw new Error('window.require(...).getRoleByIdentifier is not a function');
+    },
+  };
+
+  it('prefers the channel id, and needs neither setting', async () => {
+    assert.equal(await resolveChannelId(brokenLookup, { channelId: '1@newsletter', channelInviteCode: 'abc' }), '1@newsletter');
+    assert.equal(await resolveChannelId(brokenLookup, {}), undefined);
+  });
+
+  it('finds an invite code among the loaded channels without the whatsapp-web.js lookup', async () => {
+    const listChannelsFn = async () => [
+      { id: '1@newsletter', name: 'One', inviteCode: 'other' },
+      { id: '2@newsletter', name: 'Two', inviteCode: '0029VaAbc123' },
+    ];
+    const id = await resolveChannelId(
+      brokenLookup,
+      { channelInviteCode: 'https://whatsapp.com/channel/0029VaAbc123' },
+      { listChannelsFn },
+    );
+    assert.equal(id, '2@newsletter');
+  });
+
+  it('falls back to the whatsapp-web.js lookup, and explains when it is broken', async () => {
+    const listChannelsFn = async () => [];
+    const working = { getChannelByInviteCode: async () => ({ id: { _serialized: '3@newsletter' } }) };
+    assert.equal(await resolveChannelId(working, { channelInviteCode: 'abc' }, { listChannelsFn }), '3@newsletter');
+
+    await assert.rejects(
+      resolveChannelId(brokenLookup, { channelInviteCode: 'abc' }, { listChannelsFn }),
+      /getRoleByIdentifier is not a function.*Set WHATSAPP_CHANNEL_ID/,
+    );
   });
 });

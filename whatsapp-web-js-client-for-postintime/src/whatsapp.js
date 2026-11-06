@@ -122,15 +122,34 @@ export function removeStaleChromeLocks(sessionDir) {
 /**
  * Finds the id of the default channel from WHATSAPP_CHANNEL_ID or WHATSAPP_CHANNEL_INVITE_CODE,
  * or returns undefined when neither is set.
+ *
+ * An invite code is first matched against the channels WhatsApp Web has loaded. Only then is
+ * client.getChannelByInviteCode() tried: it relies on WhatsApp Web internals that change (in
+ * whatsapp-web.js 1.34.7 it fails with "getRoleByIdentifier is not a function").
  */
-export async function resolveChannelId(client, { channelId, channelInviteCode }) {
+export async function resolveChannelId(client, { channelId, channelInviteCode }, { listChannelsFn = listChannels } = {}) {
   if (channelId) {
     return channelId;
   }
   if (!channelInviteCode) {
     return undefined;
   }
-  const channel = await client.getChannelByInviteCode(inviteCodeFrom(channelInviteCode));
+  const inviteCode = inviteCodeFrom(channelInviteCode);
+
+  const loaded = (await listChannelsFn(client).catch(() => [])).find((channel) => channel.inviteCode === inviteCode);
+  if (loaded) {
+    return loaded.id;
+  }
+
+  let channel;
+  try {
+    channel = await client.getChannelByInviteCode(inviteCode);
+  } catch (error) {
+    throw new Error(
+      `Could not look up the channel for invite code "${channelInviteCode}" (${error?.message ?? error}). ` +
+        'Set WHATSAPP_CHANNEL_ID to one of the ids listed under "Channels on this WhatsApp account" instead.',
+    );
+  }
   if (!channel) {
     throw new Error(`No WhatsApp channel found for invite code "${channelInviteCode}".`);
   }
@@ -151,10 +170,16 @@ export async function listChannels(client) {
   return client.pupPage.evaluate(() => {
     const collections = window.require('WAWebCollections');
     const newsletters = collections.WAWebNewsletterCollection ?? collections.Newsletter;
-    return (newsletters?.getModelsArray() ?? []).map((channel) => ({
-      id: channel.id?._serialized,
-      name: channel.name ?? channel.newsletterMetadata?.name ?? '',
-    }));
+    return (newsletters?.getModelsArray() ?? []).map((channel) => {
+      const metadata = channel.newsletterMetadata ?? {};
+      const inviteLink = channel.inviteLink ?? metadata.inviteLink ?? '';
+      return {
+        id: channel.id?._serialized,
+        name: channel.name ?? metadata.name ?? '',
+        // Only known for channels whose metadata WhatsApp Web has already loaded.
+        inviteCode: channel.inviteCode ?? metadata.inviteCode ?? inviteLink.split('/').pop() ?? undefined,
+      };
+    });
   });
 }
 
