@@ -28,9 +28,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-This starts PostgreSQL, MinIO, the Spring Boot API, and the React UI.
+This starts PostgreSQL, MinIO, the Spring Boot API, the React UI, and the WhatsApp channel client.
 
-Host ports are set in `.env` (`BACKEND_HOST_PORT`, `FRONTEND_HOST_PORT`, `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`). Defaults:
+Host ports are set in `.env` (`BACKEND_HOST_PORT`, `FRONTEND_HOST_PORT`, `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`, `WHATSAPP_HOST_PORT`). Defaults:
 
 | Service | URL (default host port) |
 |---------|-----|
@@ -39,6 +39,7 @@ Host ports are set in `.env` (`BACKEND_HOST_PORT`, `FRONTEND_HOST_PORT`, `MINIO_
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | MinIO API | http://localhost:9000 |
 | MinIO console | http://localhost:9001 |
+| WhatsApp webhook | http://localhost:3000/webhooks/post-to-channel/{channelId} |
 
 Containers still listen on 8080 (API), 80 (nginx), and 9000/9001 (MinIO). Compose publishes those to the host ports above. Set `APPLICATION_ROOT_URL` (and matching `VITE_API_BASE_URL`) to the public API origin the browser uses — media URLs from the API are built from that value. Rebuild the frontend after changing `VITE_API_BASE_URL` / `BACKEND_HOST_PORT`.
 
@@ -82,8 +83,15 @@ want to look around. See [mobile/README.md](./mobile/README.md) for details.
 
 [`whatsapp-web-js-client-for-postintime/`](./whatsapp-web-js-client-for-postintime) logs in to WhatsApp
 with a QR code (via [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js)) and posts the caption of
-each webhook call to a WhatsApp channel. Run `pnpm install && pnpm start` there, then point a **Webhook**
-social account at `http://<host>:3000/webhooks/post-to-channel/<channel id>`. See its
+each webhook call to a WhatsApp channel. It runs as the `whatsapp` service of `docker compose`:
+
+1. `docker compose logs -f whatsapp` and scan the QR code with WhatsApp (**Settings > Linked devices**). The
+   login is kept in the `whatsapp_session` volume, so this is needed only once.
+2. Point a **Webhook** social account at `http://whatsapp:3000/webhooks/post-to-channel/<channel id>` (the
+   backend reaches it by its service name; use `http://localhost:3000/...` when the backend runs on the host).
+
+Its settings (`WHATSAPP_HOST_PORT`, an optional default channel, optional Basic auth) come from `.env`; see
+`.env.example`. To run it without Docker, `pnpm install && pnpm start` in that folder. See its
 [README](./whatsapp-web-js-client-for-postintime/README.md).
 
 ## Development
