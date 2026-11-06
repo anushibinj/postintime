@@ -56,11 +56,17 @@ async function main() {
   // Channels can take a while to load; list them in the background.
   logChannels(whatsapp);
 
-  defaultChannelId = await resolveChannelId(whatsapp, config);
-  if (defaultChannelId) {
-    console.log(`Default channel: ${defaultChannelId}`);
-  }
   client = whatsapp;
+
+  // A default channel that can't be found shouldn't stop the client: URLs with a channel id still work.
+  try {
+    defaultChannelId = await resolveChannelId(whatsapp, config);
+    if (defaultChannelId) {
+      console.log(`Default channel: ${defaultChannelId}`);
+    }
+  } catch (error) {
+    console.error(`No default channel: ${error?.message ?? error}`);
+  }
 }
 
 main().catch((error) => {
