@@ -83,7 +83,7 @@ want to look around. See [mobile/README.md](./mobile/README.md) for details.
 [`whatsapp-web-js-client-for-postintime/`](./whatsapp-web-js-client-for-postintime) logs in to WhatsApp
 with a QR code (via [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js)) and posts the caption of
 each webhook call to a WhatsApp channel. Run `pnpm install && pnpm start` there, then point a **Webhook**
-social account at `http://<host>:3000/webhooks/post-to-channel`. See its
+social account at `http://<host>:3000/webhooks/post-to-channel/<channel id>`. See its
 [README](./whatsapp-web-js-client-for-postintime/README.md).
 
 ## Development
