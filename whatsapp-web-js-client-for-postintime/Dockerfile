@@ -30,7 +30,7 @@ COPY src ./src
 VOLUME /data
 EXPOSE 3000
 
-# The webhook server only starts after WhatsApp has logged in, so this also reports "not logged in yet".
+# /health answers 503 until WhatsApp has logged in and loaded chats, so this also reports "not ready yet".
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3 \
     CMD node -e "fetch('http://localhost:' + (process.env.PORT || 3000) + '/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 

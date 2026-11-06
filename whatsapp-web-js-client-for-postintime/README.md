@@ -121,6 +121,17 @@ open for 65 seconds (longer than postintime's HTTP client pool). Before, posting
 starting, or reusing a connection Node had already closed, failed in postintime with
 `header parser received no bytes`.
 
+### Stuck at "loading chats…"
+
+After the login is accepted, whatsapp-web.js loads chats inside the WhatsApp Web page. When WhatsApp Web
+changes, that can fail silently and the client never becomes ready. The client now logs the loading
+percentage and any error the page throws, and exits after `WHATSAPP_READY_TIMEOUT_SECONDS` so Docker restarts
+it. If restarting doesn't help:
+
+1. Update whatsapp-web.js (`pnpm update whatsapp-web.js`), then rebuild the image.
+2. Log in again: `docker compose down`, `docker volume rm postintime_whatsapp_session`, `docker compose up -d`, then
+   scan the new QR code from `docker compose logs -f whatsapp`.
+
 ## Settings
 
 | Variable | Default | Meaning |
@@ -129,6 +140,7 @@ starting, or reusing a connection Node had already closed, failed in postintime 
 | `WHATSAPP_CHANNEL_INVITE_CODE` | | Default channel invite link or code, used when no default id is set |
 | `PORT` | `3000` | Webhook server port |
 | `HOST` | `0.0.0.0` | Address the webhook server listens on |
+| `WHATSAPP_READY_TIMEOUT_SECONDS` | `300` | How long to wait for chats to load after login before exiting (Docker then restarts it) |
 | `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD` | | Turn on HTTP Basic auth for the webhook |
 | `WHATSAPP_SESSION_DIR` | `.wwebjs_auth` | Where the WhatsApp login is saved |
 | `HEADLESS` | `true` | `false` shows the Chrome window |
