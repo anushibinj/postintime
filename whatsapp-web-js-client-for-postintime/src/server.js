@@ -45,7 +45,12 @@ export function createApp({
   const upload = multer({ storage: discardStorage, limits: { fields: 20, files: 5 } });
 
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', whatsapp: isReady() ? 'ready' : 'starting' });
+    // 503 until WhatsApp is logged in, so the Docker healthcheck only passes once posts can be sent.
+    if (isReady()) {
+      res.json({ status: 'ok' });
+    } else {
+      res.status(503).json({ status: 'starting' });
+    }
   });
 
   app.post(

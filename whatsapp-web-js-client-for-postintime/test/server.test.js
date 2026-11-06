@@ -177,7 +177,8 @@ describe('while WhatsApp is starting', () => {
     });
     try {
       const health = await fetch(base.replace('/webhooks/post-to-channel', '/health'));
-      assert.deepEqual(await health.json(), { status: 'ok', whatsapp: 'starting' });
+      assert.equal(health.status, 503);
+      assert.deepEqual(await health.json(), { status: 'starting' });
 
       const early = await fetch(url, { method: 'POST', body: postintimeForm({ caption: 'Too early' }) });
       assert.equal(early.status, 503);

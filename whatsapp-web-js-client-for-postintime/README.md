@@ -104,6 +104,7 @@ form-urlencoded bodies. Only `caption` is used: it is sent as a text message to 
 | `400 CHANNEL_REQUIRED` | The URL has no channel id and no default channel is set |
 | `401 UNAUTHORIZED` | Basic auth is on and the credentials are missing or wrong |
 | `502 WHATSAPP_SEND_FAILED` | WhatsApp refused the message (the reason is in `message`) |
+| `503 WHATSAPP_NOT_READY` | The client is still logging in to WhatsApp (or waiting for the QR code); retry later |
 
 postintime shows non-2xx responses as a failed post, with the response body.
 
@@ -113,7 +114,12 @@ Try it with curl:
 curl -F title=Test -F caption='Hello from postintime' http://localhost:3000/webhooks/post-to-channel/120363000000000000@newsletter
 ```
 
-`GET /health` returns `{"status":"ok"}`.
+`GET /health` returns `200 {"status":"ok"}` once WhatsApp is logged in, and `503 {"status":"starting"}` before.
+
+The webhook server starts listening right away, before WhatsApp has logged in, and keeps idle connections
+open for 65 seconds (longer than postintime's HTTP client pool). Before, posting while the client was
+starting, or reusing a connection Node had already closed, failed in postintime with
+`header parser received no bytes`.
 
 ## Settings
 
