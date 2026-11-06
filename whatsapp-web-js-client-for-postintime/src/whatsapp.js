@@ -33,11 +33,15 @@ export function startWhatsAppClient({ sessionDir, headless, puppeteerExecutableP
 }
 
 /**
- * Finds the id of the channel to post to, from WHATSAPP_CHANNEL_ID or WHATSAPP_CHANNEL_INVITE_CODE.
+ * Finds the id of the default channel from WHATSAPP_CHANNEL_ID or WHATSAPP_CHANNEL_INVITE_CODE,
+ * or returns undefined when neither is set.
  */
 export async function resolveChannelId(client, { channelId, channelInviteCode }) {
   if (channelId) {
     return channelId;
+  }
+  if (!channelInviteCode) {
+    return undefined;
   }
   const channel = await client.getChannelByInviteCode(inviteCodeFrom(channelInviteCode));
   if (!channel) {

@@ -5,8 +5,8 @@ export function loadConfig(env = process.env) {
   const config = {
     port: Number.parseInt(env.PORT ?? '3000', 10),
     host: env.HOST ?? '0.0.0.0',
-    // WhatsApp channel to post to: either its id (e.g. 120363000000000000@newsletter)
-    // or the invite code from its link (https://whatsapp.com/channel/<invite code>).
+    // Optional default channel, used when a webhook URL has no channel id: either its id
+    // (e.g. 120363000000000000@newsletter) or the invite code from its link (https://whatsapp.com/channel/<code>).
     channelId: blankToUndefined(env.WHATSAPP_CHANNEL_ID),
     channelInviteCode: blankToUndefined(env.WHATSAPP_CHANNEL_INVITE_CODE),
     // Optional HTTP Basic auth, matching the webhook username/password set on the postintime social account.
@@ -20,9 +20,6 @@ export function loadConfig(env = process.env) {
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
     throw new Error(`PORT must be a number between 0 and 65535, got "${env.PORT}".`);
-  }
-  if (!config.channelId && !config.channelInviteCode) {
-    throw new Error('Set WHATSAPP_CHANNEL_ID or WHATSAPP_CHANNEL_INVITE_CODE to the channel to post to.');
   }
   return config;
 }

@@ -10,20 +10,23 @@ async function main() {
   console.log('WhatsApp is ready.');
   await logChannels(client);
 
-  const channelId = await resolveChannelId(client, config);
-  console.log(`Posting to channel ${channelId}`);
+  const defaultChannelId = await resolveChannelId(client, config);
+  if (defaultChannelId) {
+    console.log(`Default channel: ${defaultChannelId}`);
+  }
 
   const app = createApp({
-    postToChannel: async (text) => {
+    postToChannel: async (channelId, text) => {
       await client.sendMessage(channelId, text);
     },
+    defaultChannelId,
     webhookUsername: config.webhookUsername,
     webhookPassword: config.webhookPassword,
   });
 
   const server = app.listen(config.port, config.host, () => {
     const { port } = server.address();
-    console.log(`Listening for postintime webhooks on http://${config.host}:${port}/webhooks/post-to-channel`);
+    console.log(`Listening for postintime webhooks on http://${config.host}:${port}/webhooks/post-to-channel/<channel id>`);
   });
   // postintime waits up to 15 minutes for a webhook to answer; don't cut slow sends off early.
   server.requestTimeout = 15 * 60 * 1000;
