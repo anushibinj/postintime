@@ -1,0 +1,17 @@
+diff --git a/src/util/Injected/Utils.js b/src/util/Injected/Utils.js
+index 540078a9d07b3df07ccd51b030556a72af4cf650..f0630cc1966ee6ac19f58982dfbb849e4b288a9b 100644
+--- a/src/util/Injected/Utils.js
++++ b/src/util/Injected/Utils.js
+@@ -483,6 +483,12 @@ exports.LoadUtils = () => {
+             ...extraOptions,
+         };
+ 
++        // postintime patch (upstream wwebjs/whatsapp-web.js#201923): the media model's internal __x_id
++        // is spread into the message above and overwrites its real id, so creating the Msg fails with
++        // "Data passed to getter must include an id property". Drop it and restore the message key.
++        delete message.__x_id;
++        message.id = newMsgKey;
++
+         // Bot's won't reply if canonicalUrl is set (linking)
+         if (botOptions) {
+             delete message.canonicalUrl;
