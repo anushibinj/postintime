@@ -2,30 +2,15 @@ import { timingSafeEqual } from 'node:crypto';
 import express from 'express';
 import multer from 'multer';
 
-/**
- * Multer storage that reads uploaded files and throws them away. postintime sends the post's
- * `media` file with every webhook call; this client only posts the caption for now.
- */
-const discardStorage = {
-  _handleFile(_req, file, callback) {
-    let size = 0;
-    file.stream.on('data', (chunk) => {
-      size += chunk.length;
-    });
-    file.stream.on('error', callback);
-    file.stream.on('end', () => callback(null, { size }));
-    file.stream.resume();
-  },
-  _removeFile(_req, _file, callback) {
-    callback(null);
-  },
-};
+/** Largest media file accepted. WhatsApp itself caps images at 16 MB and videos at 64 MB. */
+export const MAX_MEDIA_BYTES = 64 * 1024 * 1024;
 
 /**
  * Builds the HTTP app that receives postintime webhook calls.
  *
  * @param {object} options
- * @param {(channelId: string, text: string) => Promise<void>} options.postToChannel sends text to a WhatsApp channel
+ * @param {(channelId: string, text: string, media?: WebhookMedia) => Promise<void>} options.postToChannel sends
+ *   the caption to a WhatsApp channel; when the webhook call has a media file, it is posted with the caption
  * @param {string | (() => string | undefined)} [options.defaultChannelId] channel used when the URL has no channel id
  * @param {() => boolean} [options.isReady] false while WhatsApp is still starting; webhook calls then get a 503
  * @param {string} [options.webhookUsername] when set, requests need HTTP Basic auth
@@ -42,7 +27,11 @@ export function createApp({
   const app = express();
   // postintime sends multipart/form-data (media, title, caption). JSON and form-urlencoded
   // bodies are accepted too, which makes testing with curl easier.
-  const upload = multer({ storage: discardStorage, limits: { fields: 20, files: 5 } });
+  // The post's image comes in the `media` field; keep it in memory to forward it to WhatsApp.
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fields: 20, files: 5, fileSize: MAX_MEDIA_BYTES },
+  });
 
   app.get('/health', (_req, res) => {
     // 503 until WhatsApp is logged in, so the Docker healthcheck only passes once posts can be sent.
@@ -81,14 +70,20 @@ export function createApp({
 
       // Form encoders may send line breaks as CRLF; WhatsApp only needs LF.
       const caption = typeof req.body?.caption === 'string' ? req.body.caption.replace(/\r\n?/g, '\n') : '';
-      if (caption.trim() === '') {
+      const media = mediaFrom(req.files);
+      if (caption.trim() === '' && !media) {
         res.status(400).json({ error: 'CAPTION_REQUIRED', message: 'The "caption" field is empty or missing.' });
         return;
       }
 
       try {
-        await postToChannel(channelId, caption);
-        logger.log(`Posted to ${channelId}: ${preview(caption)}`);
+        if (media) {
+          await postToChannel(channelId, caption, media);
+          logger.log(`Posted ${media.mimetype} ${media.filename} to ${channelId}: ${preview(caption)}`);
+        } else {
+          await postToChannel(channelId, caption);
+          logger.log(`Posted to ${channelId}: ${preview(caption)}`);
+        }
         res.json({ status: 'sent' });
       } catch (error) {
         logger.error('Could not post to the WhatsApp channel:', error);
@@ -107,6 +102,32 @@ export function createApp({
   });
 
   return app;
+}
+
+/**
+ * @typedef {object} WebhookMedia
+ * @property {string} mimetype e.g. image/png
+ * @property {string} filename original file name, e.g. photo.png
+ * @property {Buffer} data the file contents
+ */
+
+/**
+ * Picks the post's media file from the uploaded files: the `media` field postintime sends, or else the first
+ * non-empty file (handy when testing with curl). Returns undefined when there is none.
+ *
+ * @returns {WebhookMedia | undefined}
+ */
+export function mediaFrom(files) {
+  const nonEmpty = (files ?? []).filter((file) => file.buffer?.length > 0);
+  const file = nonEmpty.find((candidate) => candidate.fieldname === 'media') ?? nonEmpty[0];
+  if (!file) {
+    return undefined;
+  }
+  return {
+    mimetype: file.mimetype || 'application/octet-stream',
+    filename: file.originalname || 'media',
+    data: file.buffer,
+  };
 }
 
 /**
