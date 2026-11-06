@@ -21,7 +21,9 @@ cp .env.example .env
 ```
 
 The channel to post to goes in the webhook URL (see below). The client prints the ids of your channels
-(`120363000000000000@newsletter`) after it logs in.
+(`120363000000000000@newsletter`) after it logs in. WhatsApp Web loads channels a little after login, so the
+list can take up to a minute to appear. If it never does, open the channel once in WhatsApp on your phone, or
+set `WHATSAPP_CHANNEL_INVITE_CODE` (below) and the client prints the channel's id as `Default channel: …`.
 
 Optionally, set a default channel in `.env` for webhook calls whose URL has no channel id, either:
 
