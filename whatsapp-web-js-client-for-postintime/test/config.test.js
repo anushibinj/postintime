@@ -4,8 +4,10 @@ import { loadConfig } from '../src/config.js';
 import { inviteCodeFrom } from '../src/whatsapp.js';
 
 describe('loadConfig', () => {
-  it('needs a channel', () => {
-    assert.throws(() => loadConfig({}), /WHATSAPP_CHANNEL_ID/);
+  it('does not need a default channel', () => {
+    const config = loadConfig({});
+    assert.equal(config.channelId, undefined);
+    assert.equal(config.channelInviteCode, undefined);
   });
 
   it('reads defaults and values', () => {

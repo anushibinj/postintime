@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
-import { createApp } from '../src/server.js';
+import { createApp, toChannelId } from '../src/server.js';
 
 const silentLogger = { log() {}, error() {} };
+const CHANNEL = '120363000000000001@newsletter';
 
 function startServer(options) {
   const app = createApp({ logger: silentLogger, ...options });
   return new Promise((resolve) => {
     const server = app.listen(0, '127.0.0.1', () => {
-      resolve({ server, url: `http://127.0.0.1:${server.address().port}/webhooks/post-to-channel` });
+      const base = `http://127.0.0.1:${server.address().port}/webhooks/post-to-channel`;
+      resolve({ server, base, url: `${base}/${CHANNEL}` });
     });
   });
 }
@@ -26,20 +28,21 @@ function postintimeForm({ caption, withMedia = true }) {
   return form;
 }
 
-describe('POST /webhooks/post-to-channel', () => {
+describe('POST /webhooks/post-to-channel/:channelId', () => {
   let sent;
   let failNext;
   let server;
+  let base;
   let url;
 
   before(async () => {
-    ({ server, url } = await startServer({
-      postToChannel: async (text) => {
+    ({ server, base, url } = await startServer({
+      postToChannel: async (channelId, text) => {
         if (failNext) {
           failNext = false;
           throw new Error('not an admin of this channel');
         }
-        sent.push(text);
+        sent.push([channelId, text]);
       },
     }));
   });
@@ -53,13 +56,13 @@ describe('POST /webhooks/post-to-channel', () => {
     const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption: 'Hello *channel*\nline 2' }) });
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { status: 'sent' });
-    assert.deepEqual(sent, ['Hello *channel*\nline 2']);
+    assert.deepEqual(sent, [[CHANNEL, 'Hello *channel*\nline 2']]);
   });
 
   it('works when the post has no media', async () => {
     const res = await fetch(url, { method: 'POST', body: postintimeForm({ caption: 'Text only', withMedia: false }) });
     assert.equal(res.status, 200);
-    assert.deepEqual(sent, ['Text only']);
+    assert.deepEqual(sent, [[CHANNEL, 'Text only']]);
   });
 
   it('accepts a JSON body', async () => {
@@ -69,7 +72,25 @@ describe('POST /webhooks/post-to-channel', () => {
       body: JSON.stringify({ caption: 'From JSON' }),
     });
     assert.equal(res.status, 200);
-    assert.deepEqual(sent, ['From JSON']);
+    assert.deepEqual(sent, [[CHANNEL, 'From JSON']]);
+  });
+
+  it('adds @newsletter when the URL has a bare or URL-encoded channel id', async () => {
+    for (const id of ['120363000000000001', encodeURIComponent(CHANNEL)]) {
+      const res = await fetch(`${base}/${id}`, { method: 'POST', body: postintimeForm({ caption: 'Hi' }) });
+      assert.equal(res.status, 200);
+    }
+    assert.deepEqual(sent, [
+      [CHANNEL, 'Hi'],
+      [CHANNEL, 'Hi'],
+    ]);
+  });
+
+  it('needs a channel id when there is no default channel', async () => {
+    const res = await fetch(base, { method: 'POST', body: postintimeForm({ caption: 'Hi' }) });
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error, 'CHANNEL_REQUIRED');
+    assert.deepEqual(sent, []);
   });
 
   it('rejects a missing or blank caption', async () => {
@@ -98,7 +119,7 @@ describe('Basic auth', () => {
   before(async () => {
     sent = [];
     ({ server, url } = await startServer({
-      postToChannel: async (text) => sent.push(text),
+      postToChannel: async (channelId, text) => sent.push([channelId, text]),
       webhookUsername: 'postintime',
       webhookPassword: 's3cret',
     }));
@@ -120,6 +141,33 @@ describe('Basic auth', () => {
       body: postintimeForm({ caption: 'Hi' }),
     });
     assert.equal(res.status, 200);
-    assert.deepEqual(sent, ['Hi']);
+    assert.deepEqual(sent, [[CHANNEL, 'Hi']]);
+  });
+});
+
+describe('default channel', () => {
+  it('is used when the URL has no channel id, and the URL id wins over it', async () => {
+    const sent = [];
+    const { server, base } = await startServer({
+      postToChannel: async (channelId, text) => sent.push([channelId, text]),
+      defaultChannelId: 'default@newsletter',
+    });
+    try {
+      await fetch(base, { method: 'POST', body: postintimeForm({ caption: 'A' }) });
+      await fetch(`${base}/other@newsletter`, { method: 'POST', body: postintimeForm({ caption: 'B' }) });
+      assert.deepEqual(sent, [
+        ['default@newsletter', 'A'],
+        ['other@newsletter', 'B'],
+      ]);
+    } finally {
+      server.close();
+    }
+  });
+});
+
+describe('toChannelId', () => {
+  it('keeps full ids and trims', () => {
+    assert.equal(toChannelId(' 123@newsletter '), '123@newsletter');
+    assert.equal(toChannelId('123'), '123@newsletter');
   });
 });
