@@ -21,6 +21,8 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 COPY package.json pnpm-lock.yaml ./
+# Fixes for whatsapp-web.js that pnpm install applies (package.json "patchedDependencies").
+COPY patches ./patches
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
