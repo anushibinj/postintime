@@ -137,7 +137,7 @@ it. If restarting doesn't help:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `WHATSAPP_CHANNEL_ID` | | Default channel id (`...@newsletter`), for URLs without a channel id |
-| `WHATSAPP_CHANNEL_INVITE_CODE` | | Default channel invite link or code, used when no default id is set |
+| `WHATSAPP_CHANNEL_INVITE_CODE` | | Default channel invite link or code, used when no default id is set. Prefer `WHATSAPP_CHANNEL_ID`: looking up invite codes depends on WhatsApp Web internals and can break |
 | `PORT` | `3000` | Webhook server port |
 | `HOST` | `0.0.0.0` | Address the webhook server listens on |
 | `WHATSAPP_READY_TIMEOUT_SECONDS` | `300` | How long to wait for chats to load after login before exiting (Docker then restarts it) |
