@@ -16,10 +16,18 @@ export function loadConfig(env = process.env) {
     sessionDir: env.WHATSAPP_SESSION_DIR ?? '.wwebjs_auth',
     headless: env.HEADLESS !== 'false',
     puppeteerExecutablePath: blankToUndefined(env.PUPPETEER_EXECUTABLE_PATH),
+    // How long to wait for WhatsApp to finish loading chats after the login is accepted. When it takes
+    // longer the client gives up and exits, so Docker (restart: unless-stopped) starts it again.
+    readyTimeoutSeconds: Number.parseInt(env.WHATSAPP_READY_TIMEOUT_SECONDS ?? '300', 10),
   };
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
     throw new Error(`PORT must be a number between 0 and 65535, got "${env.PORT}".`);
+  }
+  if (!Number.isInteger(config.readyTimeoutSeconds) || config.readyTimeoutSeconds < 1) {
+    throw new Error(
+      `WHATSAPP_READY_TIMEOUT_SECONDS must be a whole number of seconds, got "${env.WHATSAPP_READY_TIMEOUT_SECONDS}".`,
+    );
   }
   return config;
 }

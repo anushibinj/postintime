@@ -16,10 +16,16 @@ describe('loadConfig', () => {
     assert.equal(config.port, 3000);
     assert.equal(config.webhookUsername, undefined);
     assert.equal(config.headless, true);
+    assert.equal(config.readyTimeoutSeconds, 300);
+    assert.equal(loadConfig({ WHATSAPP_READY_TIMEOUT_SECONDS: '60' }).readyTimeoutSeconds, 60);
   });
 
   it('rejects a bad port', () => {
     assert.throws(() => loadConfig({ WHATSAPP_CHANNEL_ID: 'x', PORT: 'abc' }), /PORT/);
+  });
+
+  it('rejects a bad ready timeout', () => {
+    assert.throws(() => loadConfig({ WHATSAPP_READY_TIMEOUT_SECONDS: '0' }), /WHATSAPP_READY_TIMEOUT_SECONDS/);
   });
 });
 
