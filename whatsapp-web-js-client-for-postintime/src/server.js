@@ -47,7 +47,8 @@ export function createApp({ postToChannel, webhookUsername, webhookPassword = ''
     express.json({ limit: '1mb' }),
     express.urlencoded({ extended: false, limit: '1mb' }),
     async (req, res) => {
-      const caption = typeof req.body?.caption === 'string' ? req.body.caption : '';
+      // Form encoders may send line breaks as CRLF; WhatsApp only needs LF.
+      const caption = typeof req.body?.caption === 'string' ? req.body.caption.replace(/\r\n?/g, '\n') : '';
       if (caption.trim() === '') {
         res.status(400).json({ error: 'CAPTION_REQUIRED', message: 'The "caption" field is empty or missing.' });
         return;
