@@ -25,12 +25,13 @@ const discardStorage = {
  * Builds the HTTP app that receives postintime webhook calls.
  *
  * @param {object} options
- * @param {(text: string) => Promise<void>} options.postToChannel sends text to the WhatsApp channel
+ * @param {(channelId: string, text: string) => Promise<void>} options.postToChannel sends text to a WhatsApp channel
+ * @param {string} [options.defaultChannelId] channel used when the URL has no channel id
  * @param {string} [options.webhookUsername] when set, requests need HTTP Basic auth
  * @param {string} [options.webhookPassword]
  * @param {Pick<Console, 'log' | 'error'>} [options.logger]
  */
-export function createApp({ postToChannel, webhookUsername, webhookPassword = '', logger = console }) {
+export function createApp({ postToChannel, defaultChannelId, webhookUsername, webhookPassword = '', logger = console }) {
   const app = express();
   // postintime sends multipart/form-data (media, title, caption). JSON and form-urlencoded
   // bodies are accepted too, which makes testing with curl easier.
@@ -41,12 +42,22 @@ export function createApp({ postToChannel, webhookUsername, webhookPassword = ''
   });
 
   app.post(
-    '/webhooks/post-to-channel',
+    // POST /webhooks/post-to-channel/<channel id>, or without the id to use the default channel.
+    '/webhooks/post-to-channel{/:channelId}',
     basicAuth(webhookUsername, webhookPassword),
     upload.any(),
     express.json({ limit: '1mb' }),
     express.urlencoded({ extended: false, limit: '1mb' }),
     async (req, res) => {
+      const channelId = req.params.channelId ? toChannelId(req.params.channelId) : defaultChannelId;
+      if (!channelId) {
+        res.status(400).json({
+          error: 'CHANNEL_REQUIRED',
+          message: 'Put the channel id in the URL: /webhooks/post-to-channel/<channel id>.',
+        });
+        return;
+      }
+
       // Form encoders may send line breaks as CRLF; WhatsApp only needs LF.
       const caption = typeof req.body?.caption === 'string' ? req.body.caption.replace(/\r\n?/g, '\n') : '';
       if (caption.trim() === '') {
@@ -55,8 +66,8 @@ export function createApp({ postToChannel, webhookUsername, webhookPassword = ''
       }
 
       try {
-        await postToChannel(caption);
-        logger.log(`Posted to channel: ${preview(caption)}`);
+        await postToChannel(channelId, caption);
+        logger.log(`Posted to ${channelId}: ${preview(caption)}`);
         res.json({ status: 'sent' });
       } catch (error) {
         logger.error('Could not post to the WhatsApp channel:', error);
@@ -75,6 +86,14 @@ export function createApp({ postToChannel, webhookUsername, webhookPassword = ''
   });
 
   return app;
+}
+
+/**
+ * Channel ids look like 120363000000000000@newsletter. The "@newsletter" suffix may be left out of the URL.
+ */
+export function toChannelId(value) {
+  const id = value.trim();
+  return id.includes('@') ? id : `${id}@newsletter`;
 }
 
 function basicAuth(username, password) {
