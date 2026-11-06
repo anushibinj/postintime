@@ -7,23 +7,18 @@ const KEEP_ALIVE_TIMEOUT_MS = 65 * 1000;
 
 async function main() {
   const config = loadConfig();
+  let client;
+  let defaultChannelId;
 
-  console.log('Starting WhatsApp…');
-  const client = await startWhatsAppClient(config);
-  console.log('WhatsApp is ready.');
-  // Channels can take a while to load; list them in the background so the webhook server starts now.
-  logChannels(client);
-
-  const defaultChannelId = await resolveChannelId(client, config);
-  if (defaultChannelId) {
-    console.log(`Default channel: ${defaultChannelId}`);
-  }
-
+  // Start the webhook server before WhatsApp: logging in can take minutes (or wait for a QR scan).
+  // If nothing listened on the port meanwhile, Docker's port mapping would accept postintime's
+  // connection and close it with no reply ("header parser received no bytes"). Now it gets a 503.
   const app = createApp({
     postToChannel: async (channelId, text) => {
       await client.sendMessage(channelId, text);
     },
-    defaultChannelId,
+    isReady: () => client !== undefined,
+    defaultChannelId: () => defaultChannelId,
     webhookUsername: config.webhookUsername,
     webhookPassword: config.webhookPassword,
   });
@@ -32,23 +27,40 @@ async function main() {
     const { port } = server.address();
     console.log(`Listening for postintime webhooks on http://${config.host}:${port}/webhooks/post-to-channel/<channel id>`);
   });
+  server.on('error', (error) => {
+    console.error(`Webhook server error: ${error.message}`);
+    process.exit(1);
+  });
   // postintime waits up to 15 minutes for a webhook to answer; don't cut slow sends off early.
   server.requestTimeout = 15 * 60 * 1000;
   // postintime (Java HttpClient) keeps idle connections open for 30 seconds and reuses them.
   // Node closes idle connections after 5 seconds by default, so a post sent 5-30 seconds after
-  // the previous one went out on a socket Node had already closed, and failed with
+  // the previous one could go out on a socket Node had already closed, and fail with
   // "header parser received no bytes". Keep idle connections open longer than Java does.
   server.keepAliveTimeout = KEEP_ALIVE_TIMEOUT_MS;
   server.headersTimeout = KEEP_ALIVE_TIMEOUT_MS + 1000;
 
+  let whatsapp;
   const shutdown = async (signal) => {
     console.log(`\n${signal} received, shutting down…`);
     server.close();
-    await client.destroy().catch(() => {});
+    await whatsapp?.destroy().catch(() => {});
     process.exit(0);
   };
   process.once('SIGINT', () => shutdown('SIGINT'));
   process.once('SIGTERM', () => shutdown('SIGTERM'));
+
+  console.log('Starting WhatsApp…');
+  whatsapp = await startWhatsAppClient(config);
+  console.log('WhatsApp is ready.');
+  // Channels can take a while to load; list them in the background.
+  logChannels(whatsapp);
+
+  defaultChannelId = await resolveChannelId(whatsapp, config);
+  if (defaultChannelId) {
+    console.log(`Default channel: ${defaultChannelId}`);
+  }
+  client = whatsapp;
 }
 
 main().catch((error) => {
