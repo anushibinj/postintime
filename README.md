@@ -78,6 +78,14 @@ On a real phone use your computer's LAN address, and set `APPLICATION_ROOT_URL` 
 image links work. `dart run tool/mock_server.dart` starts a small mock API with sample data if you only
 want to look around. See [mobile/README.md](./mobile/README.md) for details.
 
+### WhatsApp channel client (optional)
+
+[`whatsapp-web-js-client-for-postintime/`](./whatsapp-web-js-client-for-postintime) logs in to WhatsApp
+with a QR code (via [whatsapp-web.js](https://github.com/wwebjs/whatsapp-web.js)) and posts the caption of
+each webhook call to a WhatsApp channel. Run `pnpm install && pnpm start` there, then point a **Webhook**
+social account at `http://<host>:3000/webhooks/post-to-channel`. See its
+[README](./whatsapp-web-js-client-for-postintime/README.md).
+
 ## Development
 
 See [PRD.md](./PRD.md) for full product specification.
