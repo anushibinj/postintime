@@ -9,7 +9,13 @@ const { Client, LocalAuth } = whatsappWeb;
  * Starts whatsapp-web.js, prints the login QR code in the terminal when there is no saved
  * session, and resolves with the logged-in client once WhatsApp is ready.
  */
-export function startWhatsAppClient({ sessionDir, headless, puppeteerExecutablePath, logger = console }) {
+export function startWhatsAppClient({
+  sessionDir,
+  headless,
+  puppeteerExecutablePath,
+  readyTimeoutSeconds = 300,
+  logger = console,
+}) {
   removeStaleChromeLocks(sessionDir);
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: sessionDir }),
@@ -21,18 +27,83 @@ export function startWhatsAppClient({ sessionDir, headless, puppeteerExecutableP
     },
   });
 
-  return new Promise((resolve, reject) => {
-    client.on('qr', (qr) => {
-      logger.log('\nScan this QR code with WhatsApp (Settings > Linked devices > Link a device):\n');
-      qrcode.generate(qr, { small: true });
-    });
-    // whatsapp-web.js can fire 'authenticated' several times while it loads; say it once.
-    client.once('authenticated', () => logger.log('WhatsApp login accepted, loading chats…'));
-    client.on('auth_failure', (message) => reject(new Error(`WhatsApp login failed: ${message}`)));
-    client.on('disconnected', (reason) => logger.error(`WhatsApp disconnected: ${reason}`));
-    client.once('ready', () => resolve(client));
+  client.on('qr', (qr) => {
+    logger.log('\nScan this QR code with WhatsApp (Settings > Linked devices > Link a device):\n');
+    qrcode.generate(qr, { small: true });
+  });
 
-    client.initialize().catch(reject);
+  const ready = waitForReady(client, { timeoutMs: readyTimeoutSeconds * 1000, logger });
+  client.initialize().catch((error) => client.emit('init_failure', error));
+  return ready.catch(async (error) => {
+    await client.destroy().catch(() => {});
+    throw error;
+  });
+}
+
+/**
+ * Resolves with the client when it fires 'ready'. Rejects when the login fails, when initialize() fails, or
+ * when WhatsApp has not finished loading chats `timeoutMs` after the login was accepted.
+ *
+ * whatsapp-web.js loads chats inside the browser page; when that fails (often after a WhatsApp Web update)
+ * the error stays in the page and 'ready' never comes. So log what the page reports, and give up in time.
+ */
+export function waitForReady(client, { timeoutMs, logger = console }) {
+  return new Promise((resolve, reject) => {
+    let timer;
+    let lastPercent;
+    let settled = false;
+    const finish = (callback, value) => {
+      settled = true;
+      clearTimeout(timer);
+      callback(value);
+    };
+
+    // whatsapp-web.js can fire 'authenticated' several times while it loads; act on the first.
+    client.once('authenticated', () => {
+      logger.log('WhatsApp login accepted, loading chats…');
+      watchPageErrors(client.pupPage, logger, () => !settled);
+      timer = setTimeout(() => {
+        settled = true;
+        reject(
+          new Error(
+            `WhatsApp did not finish loading chats within ${Math.round(timeoutMs / 1000)} seconds. ` +
+              'Restart the client; if it keeps happening, update whatsapp-web.js or log in again ' +
+              '(delete the saved session and scan the QR code).',
+          ),
+        );
+      }, timeoutMs);
+    });
+    client.on('loading_screen', (percent) => {
+      if (percent !== lastPercent) {
+        lastPercent = percent;
+        logger.log(`Loading WhatsApp: ${percent}%`);
+      }
+    });
+    client.on('change_state', (state) => logger.log(`WhatsApp state: ${state}`));
+    client.on('auth_failure', (message) => finish(reject, new Error(`WhatsApp login failed: ${message}`)));
+    client.on('init_failure', (error) => finish(reject, error instanceof Error ? error : new Error(String(error))));
+    client.on('disconnected', (reason) => logger.error(`WhatsApp disconnected: ${reason}`));
+    client.once('ready', () => finish(resolve, client));
+  });
+}
+
+/**
+ * Logs errors thrown inside the WhatsApp Web page while chats load, which whatsapp-web.js would otherwise
+ * hide. Stops once loading is over, as WhatsApp Web logs plenty of harmless errors later on.
+ */
+function watchPageErrors(page, logger, isLoading) {
+  if (!page || typeof page.on !== 'function') {
+    return;
+  }
+  page.on('pageerror', (error) => {
+    if (isLoading()) {
+      logger.error(`WhatsApp Web page error: ${error?.message ?? error}`);
+    }
+  });
+  page.on('console', (message) => {
+    if (isLoading() && message.type() === 'error') {
+      logger.error(`WhatsApp Web console error: ${message.text()}`);
+    }
   });
 }
 
