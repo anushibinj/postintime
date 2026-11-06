@@ -1,12 +1,12 @@
-// Mirrors BulkPublishService on the backend.
+// Mirrors BulkPublishService on the backend. 0 posts back to back; the sheet still opens on 5.
 import 'dart:math' as math;
 
-const int bulkIntervalMin = 5;
+const int bulkIntervalMin = 0;
 const int bulkIntervalMax = 30;
 const int bulkIntervalStep = 5;
 const int bulkIntervalDefault = 5;
 
-/// Snaps any value onto the allowed 5..30 minute grid.
+/// Snaps any value onto the allowed 0..30 minute grid.
 int normalizeInterval(num value) {
   if (value.isNaN || value.isInfinite) {
     return bulkIntervalDefault;
@@ -16,7 +16,7 @@ int normalizeInterval(num value) {
   return math.min(bulkIntervalMax, math.max(bulkIntervalMin, snapped));
 }
 
-/// Every slider step with its label, e.g. `{5: '5m', 10: '10m', ...}`.
+/// Every slider step with its label, e.g. `{0: '0m', 5: '5m', ...}`.
 Map<int, String> intervalMarks() {
   return {for (var value = bulkIntervalMin; value <= bulkIntervalMax; value += bulkIntervalStep) value: '${value}m'};
 }

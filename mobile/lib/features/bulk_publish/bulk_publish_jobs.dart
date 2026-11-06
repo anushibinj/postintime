@@ -227,7 +227,10 @@ class _QueueRow extends StatelessWidget {
                         formatQueuedAt(item.scheduledAt, now),
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                       ),
-                    Text('${entry.job.intervalMinutes} min gap', style: AppText.secondarySmall),
+                    Text(
+                      entry.job.intervalMinutes == 0 ? 'no gap' : '${entry.job.intervalMinutes} min gap',
+                      style: AppText.secondarySmall,
+                    ),
                   ],
                 ),
               ],

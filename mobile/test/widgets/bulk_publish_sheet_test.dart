@@ -53,7 +53,7 @@ Future<void> pumpSheet(
 }
 
 void main() {
-  testWidgets('defaults to a 5 minute interval on a 5-30 slider', (tester) async {
+  testWidgets('defaults to a 5 minute interval on a 0-30 slider', (tester) async {
     (int, List<String>)? submitted;
     await pumpSheet(
       tester,
@@ -62,21 +62,21 @@ void main() {
     );
 
     final slider = tester.widget<Slider>(find.byType(Slider));
-    expect(slider.min, 5);
+    expect(slider.min, 0);
     expect(slider.max, 30);
     expect(slider.value, 5);
     expect(find.text('Bulk post 3 posts'), findsOneWidget);
     expect(find.textContaining('The first post goes live right away'), findsOneWidget);
     expect(find.textContaining(RegExp(r'The last post goes live at .*\(in 10 min\)')), findsOneWidget);
-    for (final label in ['5m', '10m', '15m', '20m', '25m', '30m']) {
+    for (final label in ['0m', '5m', '10m', '15m', '20m', '25m', '30m']) {
       expect(find.text(label), findsOneWidget);
     }
 
-    // Dragging the thumb one step (a fifth of the track) moves the interval to 10 minutes.
+    // Dragging the thumb one step (a sixth of the track) moves the interval to 10 minutes.
     final box = tester.getRect(find.byType(Slider));
     const trackPadding = 24.0;
-    final step = (box.width - 2 * trackPadding) / 5;
-    await tester.dragFrom(Offset(box.left + trackPadding, box.center.dy), Offset(step, 0));
+    final step = (box.width - 2 * trackPadding) / 6;
+    await tester.dragFrom(Offset(box.left + trackPadding + step, box.center.dy), Offset(step, 0));
     await tester.pumpAndSettle();
     expect(tester.widget<Slider>(find.byType(Slider)).value, 10);
     expect(find.textContaining(RegExp(r'The last post goes live at .*\(in 20 min\)')), findsOneWidget);
@@ -87,6 +87,27 @@ void main() {
     expect(submitted!.$2, ['a1']);
   });
 
+  testWidgets('posts back to back when 0 minutes is picked deliberately', (tester) async {
+    (int, List<String>)? submitted;
+    await pumpSheet(
+      tester,
+      accounts: [account(id: 'a1', name: 'LinkedIn hook')],
+      onSubmit: (interval, ids) => submitted = (interval, ids),
+    );
+
+    expect(tester.widget<Slider>(find.byType(Slider)).value, 5);
+    final box = tester.getRect(find.byType(Slider));
+    const trackPadding = 24.0;
+    final step = (box.width - 2 * trackPadding) / 6;
+    await tester.dragFrom(Offset(box.left + trackPadding + step, box.center.dy), Offset(-step, 0));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
+    expect(find.textContaining('the rest go out one after another with no wait in between'), findsOneWidget);
+
+    await tapText(tester, 'Start bulk posting');
+    expect(submitted!.$1, 0);
+  });
+
   testWidgets('the interval labels sit under their slider stops', (tester) async {
     await pumpSheet(tester, accounts: [account(id: 'a1')]);
 
@@ -94,9 +115,9 @@ void main() {
     final slider = tester.getRect(find.byType(Slider));
     final first = slider.left + 24;
     final last = slider.right - 24;
-    final step = (last - first) / 5;
-    for (var i = 0; i < 6; i++) {
-      final label = '${5 + i * 5}m';
+    final step = (last - first) / 6;
+    for (var i = 0; i < 7; i++) {
+      final label = '${i * 5}m';
       expect(tester.getCenter(find.text(label)).dx, closeTo(first + i * step, 0.5), reason: label);
     }
   });

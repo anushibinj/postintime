@@ -77,9 +77,11 @@ class _BulkPublishSheetState extends ConsumerState<BulkPublishSheet> {
       startsNow ? 'The $theFirst goes live right away' : 'The $theFirst goes live at ${formatQueuedAt(first, now)}',
     );
     summary.write(
-      posts.length > 1
-          ? ', then one every $_interval minutes. The last post goes live at ${formatQueuedAt(last, now)}.'
-          : '.',
+      posts.length <= 1
+          ? '.'
+          : _interval == 0
+          ? ', then the rest go out one after another with no wait in between.'
+          : ', then one every $_interval minutes. The last post goes live at ${formatQueuedAt(last, now)}.',
     );
 
     final canStart = pickedIds.isNotEmpty && posts.isNotEmpty && !widget.submitting;
