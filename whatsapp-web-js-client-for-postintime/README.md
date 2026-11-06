@@ -167,7 +167,13 @@ The tests run the webhook server with a fake WhatsApp sender, so they need no ph
 ### whatsapp-web.js patch
 
 `patches/whatsapp-web.js@1.34.7.patch` fixes media sends in whatsapp-web.js 1.34.7, which fail on current
-WhatsApp Web with `Data passed to getter must include an id property (it's how we memoize)` (the fix from
-upstream PR wwebjs/whatsapp-web.js#201923). `pnpm install` applies it. When upgrading whatsapp-web.js, drop the
+WhatsApp Web with:
+
+- `Data passed to getter must include an id property (it's how we memoize)` (fix from upstream PR
+  wwebjs/whatsapp-web.js#201923)
+- `msg.avParams is not a function` when posting media to a channel (fix from upstream PR
+  wwebjs/whatsapp-web.js#201824)
+
+`pnpm install` applies it. When upgrading whatsapp-web.js, drop the
 patch (`patchedDependencies` in `package.json`) if the new version has the fix; otherwise redo it with
 `pnpm patch whatsapp-web.js`.
