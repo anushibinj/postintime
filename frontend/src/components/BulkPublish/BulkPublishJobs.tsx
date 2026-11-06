@@ -130,7 +130,7 @@ export function BulkPublishJobs({ channelId }: { channelId: string }) {
                           {entry.item.postTitle}
                         </Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
-                          {entry.job.intervalMinutes} min gap
+                          {entry.job.intervalMinutes === 0 ? 'no gap' : `${entry.job.intervalMinutes} min gap`}
                         </Typography.Text>
                         <Tooltip title={entry.item.status === 'publishing' ? 'Being posted right now' : 'Remove from queue'}>
                           <Button

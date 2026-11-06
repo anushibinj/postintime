@@ -87,9 +87,11 @@ export function BulkPublishModal({
         {startsNow
           ? `The ${posts.length > 1 ? 'first post' : 'post'} goes live right away`
           : `The ${posts.length > 1 ? 'first post' : 'post'} goes live at ${formatQueuedAt(first, now)}`}
-        {posts.length > 1
-          ? `, then one every ${interval} minutes. The last post goes live at ${formatQueuedAt(last, now)}.`
-          : '.'}
+        {posts.length <= 1
+          ? '.'
+          : interval === 0
+            ? ', then the rest go out one after another with no wait in between.'
+            : `, then one every ${interval} minutes. The last post goes live at ${formatQueuedAt(last, now)}.`}
       </Typography.Paragraph>
 
       {webhookAccounts.length === 0 ? (

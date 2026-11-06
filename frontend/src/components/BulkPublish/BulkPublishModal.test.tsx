@@ -23,7 +23,7 @@ const posts = [
 ];
 
 describe('BulkPublishModal', () => {
-  it('defaults to a 5 minute interval on a 5-30 slider', () => {
+  it('defaults to a 5 minute interval on a 0-30 slider', () => {
     const onSubmit = vi.fn();
     render(
       <BulkPublishModal
@@ -39,7 +39,7 @@ describe('BulkPublishModal', () => {
     );
 
     const slider = screen.getByRole('slider');
-    expect(slider).toHaveAttribute('aria-valuemin', '5');
+    expect(slider).toHaveAttribute('aria-valuemin', '0');
     expect(slider).toHaveAttribute('aria-valuemax', '30');
     expect(slider).toHaveAttribute('aria-valuenow', '5');
     expect(screen.getByText(/first post goes live right away/)).toBeInTheDocument();
@@ -51,6 +51,31 @@ describe('BulkPublishModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /start bulk posting/i }));
     expect(onSubmit).toHaveBeenCalledWith(10, ['a1']);
+  });
+
+  it('posts back to back when 0 minutes is picked deliberately', () => {
+    const onSubmit = vi.fn();
+    render(
+      <BulkPublishModal
+        open
+        posts={posts}
+        accounts={[account({ id: 'a1', name: 'LinkedIn hook' })]}
+        queueTail={null}
+        queuedCount={0}
+        submitting={false}
+        onCancel={() => {}}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const slider = screen.getByRole('slider');
+    expect(slider).toHaveAttribute('aria-valuenow', '5');
+    fireEvent.keyDown(slider, { key: 'ArrowLeft', keyCode: 37 });
+    expect(slider).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText(/the rest go out one after another with no wait in between/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start bulk posting/i }));
+    expect(onSubmit).toHaveBeenCalledWith(0, ['a1']);
   });
 
   it('queues new posts behind the posts already waiting', () => {
