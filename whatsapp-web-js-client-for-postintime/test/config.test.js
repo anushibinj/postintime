@@ -29,3 +29,21 @@ describe('inviteCodeFrom', () => {
     assert.equal(inviteCodeFrom('0029VaAbc123'), '0029VaAbc123');
   });
 });
+
+describe('removeStaleChromeLocks', () => {
+  it('deletes Chrome lock files, including dangling symlinks, and keeps the session', async () => {
+    const { mkdtempSync, mkdirSync, symlinkSync, writeFileSync, readdirSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { removeStaleChromeLocks } = await import('../src/whatsapp.js');
+
+    const dir = mkdtempSync(join(tmpdir(), 'wwebjs-'));
+    mkdirSync(join(dir, 'session'));
+    symlinkSync('old-host-12345', join(dir, 'session', 'SingletonLock'));
+    writeFileSync(join(dir, 'session', 'Local State'), '{}');
+
+    removeStaleChromeLocks(dir);
+    removeStaleChromeLocks(join(dir, 'missing'));
+    assert.deepEqual(readdirSync(join(dir, 'session')), ['Local State']);
+  });
+});

@@ -1,3 +1,5 @@
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
 import qrcode from 'qrcode-terminal';
 import whatsappWeb from 'whatsapp-web.js';
 
@@ -8,13 +10,14 @@ const { Client, LocalAuth } = whatsappWeb;
  * session, and resolves with the logged-in client once WhatsApp is ready.
  */
 export function startWhatsAppClient({ sessionDir, headless, puppeteerExecutablePath, logger = console }) {
+  removeStaleChromeLocks(sessionDir);
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: sessionDir }),
     puppeteer: {
       headless,
       executablePath: puppeteerExecutablePath,
-      // Needed when Chrome runs as root, for example inside Docker.
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      // Needed when Chrome runs as root or in a container (Docker's /dev/shm is only 64 MB).
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     },
   });
 
@@ -30,6 +33,18 @@ export function startWhatsAppClient({ sessionDir, headless, puppeteerExecutableP
 
     client.initialize().catch(reject);
   });
+}
+
+/**
+ * Chrome leaves lock files in its profile when it is killed (for example when a container stops).
+ * The next start then fails with "The browser is already running". Only one client uses this
+ * session folder, so the locks are always stale here.
+ */
+export function removeStaleChromeLocks(sessionDir) {
+  // LocalAuth keeps the Chrome profile in <dataPath>/session.
+  for (const name of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
+    rmSync(join(sessionDir, 'session', name), { force: true });
+  }
 }
 
 /**
