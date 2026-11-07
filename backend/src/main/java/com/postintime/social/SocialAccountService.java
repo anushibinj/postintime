@@ -39,6 +39,7 @@ public class SocialAccountService {
         account.setPlatform(parsePlatform(request.platform()));
         account.setName(request.name());
         account.setProfileUrl(request.profileUrl());
+        account.setFooterText(FooterText.normalize(request.footerText()));
         applyPostingSettings(
                 account,
                 request.postingMode(),
@@ -63,6 +64,9 @@ public class SocialAccountService {
         }
         if (request.profileUrl() != null) {
             account.setProfileUrl(request.profileUrl());
+        }
+        if (request.footerText() != null) {
+            account.setFooterText(FooterText.normalize(request.footerText()));
         }
         if (request.enabled() != null) {
             account.setEnabled(request.enabled());
@@ -176,6 +180,7 @@ public class SocialAccountService {
                 account.getWebhookAuthType().name().toLowerCase(),
                 account.getWebhookUsername(),
                 account.getWebhookPassword() != null && !account.getWebhookPassword().isBlank(),
+                account.getFooterText(),
                 account.getCreatedAt(),
                 account.getUpdatedAt()
         );

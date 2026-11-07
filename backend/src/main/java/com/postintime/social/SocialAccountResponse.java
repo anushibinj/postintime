@@ -14,6 +14,7 @@ public record SocialAccountResponse(
         String webhookAuthType,
         String webhookUsername,
         boolean webhookHasPassword,
+        String footerText,
         Instant createdAt,
         Instant updatedAt
 ) {

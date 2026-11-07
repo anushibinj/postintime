@@ -11,6 +11,7 @@ public record CreateSocialAccountRequest(
         String webhookUrl,
         String webhookAuthType,
         String webhookUsername,
-        String webhookPassword
+        String webhookPassword,
+        String footerText
 ) {
 }

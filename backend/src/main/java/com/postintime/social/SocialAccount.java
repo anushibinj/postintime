@@ -59,6 +59,9 @@ public class SocialAccount {
     @Column(name = "webhook_password")
     private String webhookPassword;
 
+    @Column(name = "footer_text", nullable = false)
+    private String footerText = "";
+
     @Column(nullable = false)
     private boolean enabled = true;
 
