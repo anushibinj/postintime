@@ -136,8 +136,18 @@ class ManualPublishSheet extends StatefulWidget {
 class _ManualPublishSheetState extends State<ManualPublishSheet> {
   bool _marking = false;
 
+  /// The caption followed by the account's footer after a blank line.
+  String get _captionWithFooter {
+    final caption = widget.post.caption ?? '';
+    final footer = widget.target.socialAccount.footerText;
+    if (footer.isEmpty) {
+      return caption;
+    }
+    return caption.trim().isEmpty ? footer : '$caption\n\n$footer';
+  }
+
   Future<void> _copyCaption() async {
-    await Clipboard.setData(ClipboardData(text: widget.post.caption ?? ''));
+    await Clipboard.setData(ClipboardData(text: _captionWithFooter));
     Toast.success('Caption copied');
   }
 
@@ -175,7 +185,7 @@ class _ManualPublishSheetState extends State<ManualPublishSheet> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(kRadius)),
-            child: SelectableText(widget.post.caption ?? ''),
+            child: SelectableText(_captionWithFooter),
           ),
           Align(
             alignment: Alignment.centerLeft,
