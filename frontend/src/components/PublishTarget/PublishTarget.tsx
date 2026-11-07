@@ -4,6 +4,7 @@ import type { Post, PostTarget } from '../../types';
 import { PageLoader } from '../PageLoader/PageLoader';
 import { usePublishingMutations } from '../../hooks/usePublishTarget';
 import { format } from 'date-fns';
+import { withFooter } from '../../hooks/footerText';
 import { lazy, Suspense, useState } from 'react';
 
 const StatusBadge = lazy(() => import('../StatusBadge/StatusBadge'));
@@ -22,7 +23,7 @@ export function PublishTargetPanel({ target, post, channelId, postId, locked = f
   const { publish, markPublished } = usePublishingMutations(channelId, postId);
 
   const handleCopyCaption = () => {
-    navigator.clipboard.writeText(post.caption || '');
+    navigator.clipboard.writeText(withFooter(post.caption, target.socialAccount.footerText));
     message.success('Caption copied');
   };
 
@@ -110,8 +111,8 @@ export function PublishTargetPanel({ target, post, channelId, postId, locked = f
       >
         <Typography.Paragraph>
           <Typography.Text strong>Caption</Typography.Text>
-          <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 8, marginTop: 8 }}>
-            {post.caption}
+          <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 8, marginTop: 8, whiteSpace: 'pre-wrap' }}>
+            {withFooter(post.caption, target.socialAccount.footerText)}
           </div>
           <Button icon={<Copy size={14} />} onClick={handleCopyCaption} style={{ marginTop: 8 }}>Copy Caption</Button>
         </Typography.Paragraph>
