@@ -25,6 +25,7 @@ class _SocialAccountFormSheetState extends ConsumerState<SocialAccountFormSheet>
   late final _profileUrl = TextEditingController(text: widget.account?.profileUrl);
   late final _webhookUrl = TextEditingController(text: widget.account?.webhookUrl);
   late final _username = TextEditingController(text: widget.account?.webhookUsername);
+  late final _footer = TextEditingController(text: widget.account?.footerText);
   final _password = TextEditingController();
   late Platform? _platform = widget.account?.platform;
   late PostingMode _mode = widget.account?.postingMode ?? PostingMode.manual;
@@ -42,6 +43,7 @@ class _SocialAccountFormSheetState extends ConsumerState<SocialAccountFormSheet>
     _webhookUrl.dispose();
     _username.dispose();
     _password.dispose();
+    _footer.dispose();
     super.dispose();
   }
 
@@ -57,6 +59,8 @@ class _SocialAccountFormSheetState extends ConsumerState<SocialAccountFormSheet>
       name: _name.text.trim(),
       // Editing sends the field even when emptied, so a profile URL can be cleared.
       profileUrl: _editing ? _profileUrl.text.trim() : _nullIfEmpty(_profileUrl.text),
+      // Always sent so a footer can be cleared; newlines are normalised by the backend per platform.
+      footerText: _footer.text,
       postingMode: _mode,
       webhookUrl: _webhook ? _webhookUrl.text.trim() : null,
       webhookAuthType: _webhook ? _authType : WebhookAuthType.none,
@@ -119,6 +123,19 @@ class _SocialAccountFormSheetState extends ConsumerState<SocialAccountFormSheet>
               autocorrect: false,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(labelText: 'Profile URL', hintText: 'https://instagram.com/example'),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _footer,
+              keyboardType: TextInputType.multiline,
+              minLines: 3,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'Footer text',
+                hintText: 'Follow me on twitter',
+                helperText: 'Added below the caption of every post published to this account.',
+                alignLabelWithHint: true,
+              ),
             ),
             const SizedBox(height: 16),
             const Text('Action type'),
