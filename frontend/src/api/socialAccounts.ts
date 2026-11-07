@@ -14,6 +14,7 @@ export async function createSocialAccount(channelId: string, data: {
   webhookAuthType?: WebhookAuthType;
   webhookUsername?: string;
   webhookPassword?: string;
+  footerText?: string;
 }): Promise<SocialAccount> {
   return apiFetch<SocialAccount>(`/api/v1/channels/${channelId}/social-accounts`, {
     method: 'POST',
@@ -31,6 +32,7 @@ export async function updateSocialAccount(channelId: string, accountId: string, 
   webhookAuthType: WebhookAuthType;
   webhookUsername: string;
   webhookPassword: string;
+  footerText: string;
 }>): Promise<SocialAccount> {
   return apiFetch<SocialAccount>(`/api/v1/channels/${channelId}/social-accounts/${accountId}`, {
     method: 'PATCH',

@@ -24,6 +24,7 @@ type AccountFormValues = {
   webhookAuthType: WebhookAuthType;
   webhookUsername?: string;
   webhookPassword?: string;
+  footerText?: string;
 };
 
 export function SocialAccountsPage() {
@@ -40,7 +41,7 @@ export function SocialAccountsPage() {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ postingMode: 'manual', webhookAuthType: 'none' });
+    form.setFieldsValue({ postingMode: 'manual', webhookAuthType: 'none', footerText: '' });
     setModalOpen(true);
   };
 
@@ -55,6 +56,7 @@ export function SocialAccountsPage() {
       webhookAuthType: account.webhookAuthType || 'none',
       webhookUsername: account.webhookUsername || undefined,
       webhookPassword: undefined,
+      footerText: account.footerText ?? '',
     });
     setModalOpen(true);
   };
@@ -65,6 +67,7 @@ export function SocialAccountsPage() {
         platform: values.platform,
         name: values.name,
         profileUrl: values.profileUrl,
+        footerText: values.footerText ?? '',
         postingMode: values.postingMode,
         webhookUrl: values.postingMode === 'webhook' ? values.webhookUrl : undefined,
         webhookAuthType: values.postingMode === 'webhook' ? values.webhookAuthType : 'none',
@@ -184,6 +187,13 @@ export function SocialAccountsPage() {
           </Form.Item>
           <Form.Item name="profileUrl" label="Profile URL">
             <Input placeholder="https://instagram.com/example" />
+          </Form.Item>
+          <Form.Item
+            name="footerText"
+            label="Footer text"
+            extra="Added below the caption of every post published to this account, e.g. “Follow me on X”."
+          >
+            <Input.TextArea rows={3} placeholder="Follow me on twitter" />
           </Form.Item>
           <Form.Item name="postingMode" label="Action type" rules={[{ required: true }]}>
             <Radio.Group>

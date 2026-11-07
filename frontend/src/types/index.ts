@@ -87,6 +87,7 @@ export interface SocialAccount {
   webhookAuthType?: WebhookAuthType;
   webhookUsername?: string | null;
   webhookHasPassword?: boolean;
+  footerText?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,6 +99,7 @@ export interface PostTarget {
     platform: Platform;
     name: string;
     profileUrl?: string;
+    footerText?: string;
   };
   status: TargetStatus;
   publishingMode: PostingMode;
