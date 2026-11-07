@@ -67,6 +67,7 @@ class FakeBackend {
     String mode = 'manual',
     String? profileUrl,
     String? webhookUrl,
+    String footerText = '',
   }) {
     final stamp = _stamp();
     final account = {
@@ -80,6 +81,7 @@ class FakeBackend {
       'webhookAuthType': 'none',
       'webhookUsername': null,
       'webhookHasPassword': false,
+      'footerText': footerText,
       'createdAt': stamp,
       'updatedAt': stamp,
     };
@@ -154,6 +156,7 @@ class FakeBackend {
         'platform': account['platform'],
         'name': account['name'],
         'profileUrl': account['profileUrl'],
+        'footerText': account['footerText'],
       },
       'status': target['status'],
       'publishingMode': account['postingMode'],
@@ -371,6 +374,7 @@ class FakeBackend {
           mode: json['postingMode'] as String? ?? 'manual',
           profileUrl: json['profileUrl'] as String?,
           webhookUrl: json['webhookUrl'] as String?,
+          footerText: json['footerText'] as String? ?? '',
         );
         _applyWebhookAuth(account, json);
         return (201, account);
@@ -386,7 +390,7 @@ class FakeBackend {
         return (204, null);
       }
       if (method == 'PATCH') {
-        for (final key in ['name', 'profileUrl', 'postingMode', 'webhookUrl']) {
+        for (final key in ['name', 'profileUrl', 'postingMode', 'webhookUrl', 'footerText']) {
           if (json.containsKey(key)) account[key] = json[key];
         }
         _applyWebhookAuth(account, json);

@@ -181,6 +181,41 @@ void main() {
     expect(opened.app.backend.bodies[marked], containsPair('notes', 'Published manually'));
   });
 
+  testWidgets('manual publishing copies the caption followed by the account footer', (tester) async {
+    final clipboard = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        clipboard.add((call.arguments as Map)['text'] as String);
+      }
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+
+    await openPost(
+      tester,
+      seed: (backend, channelId, postId) {
+        final account = backend.addAccount(
+          channelId,
+          platform: 'instagram',
+          name: 'Insta',
+          footerText: 'Follow me on twitter',
+        );
+        backend.targets[postId]!.add({
+          'id': 't1',
+          'socialAccountId': account['id'],
+          'status': 'pending',
+          'publishedAt': null,
+        });
+      },
+    );
+
+    await scrollTo(tester, find.byTooltip('Publish'));
+    await tester.tap(find.byTooltip('Publish'));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Copy Caption');
+    expect(clipboard.single, endsWith('\n\nFollow me on twitter'));
+  });
+
   testWidgets('a post in the bulk queue cannot be published individually', (tester) async {
     await openPost(
       tester,

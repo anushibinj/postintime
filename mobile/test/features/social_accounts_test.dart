@@ -74,6 +74,27 @@ void main() {
     expect(account['profileUrl'], 'https://instagram.com/me');
   });
 
+  testWidgets('saves a multiline footer text, empty by default', (tester) async {
+    final opened = await openAccounts(tester);
+
+    await tapText(tester, 'Add Account');
+    await tester.tap(platformDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('LinkedIn').last);
+    await tester.pumpAndSettle();
+    await enterField(tester, 'Name', 'Work LinkedIn');
+    await tapText(tester, 'OK');
+    expect(opened.app.backend.accounts[opened.channelId]!.single['footerText'], '');
+
+    await tapText(tester, 'Edit');
+    await enterField(tester, 'Footer text', 'Follow me on twitter\nhttps://x.com/me');
+    await tapText(tester, 'OK');
+    expect(
+      opened.app.backend.accounts[opened.channelId]!.single['footerText'],
+      'Follow me on twitter\nhttps://x.com/me',
+    );
+  });
+
   testWidgets('adds a webhook account with basic auth', (tester) async {
     final opened = await openAccounts(tester);
 
