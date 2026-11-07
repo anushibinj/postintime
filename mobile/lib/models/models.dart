@@ -240,6 +240,7 @@ class SocialAccount {
     this.webhookAuthType = WebhookAuthType.none,
     this.webhookUsername,
     this.webhookHasPassword = false,
+    this.footerText = '',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -254,6 +255,7 @@ class SocialAccount {
   final WebhookAuthType webhookAuthType;
   final String? webhookUsername;
   final bool webhookHasPassword;
+  final String footerText;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -270,24 +272,35 @@ class SocialAccount {
     webhookAuthType: WebhookAuthType.parse(json['webhookAuthType'] as String?),
     webhookUsername: json['webhookUsername'] as String?,
     webhookHasPassword: json['webhookHasPassword'] as bool? ?? false,
+    footerText: json['footerText'] as String? ?? '',
     createdAt: _requiredDate(json['createdAt']),
     updatedAt: _requiredDate(json['updatedAt']),
   );
 }
 
 class TargetAccount {
-  const TargetAccount({required this.id, required this.platform, required this.name, this.profileUrl});
+  const TargetAccount({
+    required this.id,
+    required this.platform,
+    required this.name,
+    this.profileUrl,
+    this.footerText = '',
+  });
 
   final String id;
   final Platform platform;
   final String name;
   final String? profileUrl;
 
+  /// Already formatted with the platform's newline convention by the backend.
+  final String footerText;
+
   factory TargetAccount.fromJson(Map<String, dynamic> json) => TargetAccount(
     id: json['id'] as String,
     platform: Platform.parse(json['platform'] as String?),
     name: json['name'] as String? ?? '',
     profileUrl: json['profileUrl'] as String?,
+    footerText: json['footerText'] as String? ?? '',
   );
 }
 

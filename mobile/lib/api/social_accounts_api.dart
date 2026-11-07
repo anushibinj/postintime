@@ -12,6 +12,7 @@ class SocialAccountInput {
     this.webhookAuthType,
     this.webhookUsername,
     this.webhookPassword,
+    this.footerText,
   });
 
   final Platform? platform;
@@ -22,6 +23,7 @@ class SocialAccountInput {
   final WebhookAuthType? webhookAuthType;
   final String? webhookUsername;
   final String? webhookPassword;
+  final String? footerText;
 
   Map<String, dynamic> toJson() => {
     if (platform != null) 'platform': platform!.name,
@@ -32,6 +34,7 @@ class SocialAccountInput {
     if (webhookAuthType != null) 'webhookAuthType': webhookAuthType!.name,
     if (webhookUsername != null) 'webhookUsername': webhookUsername,
     if (webhookPassword != null) 'webhookPassword': webhookPassword,
+    if (footerText != null) 'footerText': footerText,
   };
 }
 
