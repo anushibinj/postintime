@@ -21,6 +21,7 @@ import com.postintime.publishing.domain.TargetStatus;
 import com.postintime.publishing.publisher.PublisherFactory;
 import com.postintime.publishing.publisher.SocialMediaPublisher;
 import com.postintime.social.PostingMode;
+import com.postintime.social.FooterText;
 import com.postintime.social.SocialAccount;
 import com.postintime.social.SocialAccountRepository;
 import com.postintime.social.SocialAccountService;
@@ -250,7 +251,8 @@ public class PublishingService {
                         account.getId(),
                         account.getPlatform().name().toLowerCase(),
                         account.getName(),
-                        account.getProfileUrl()
+                        account.getProfileUrl(),
+                        FooterText.forPlatform(account.getFooterText(), account.getPlatform())
                 ),
                 target.getStatus().name().toLowerCase(),
                 target.getPublishingMode().name().toLowerCase(),

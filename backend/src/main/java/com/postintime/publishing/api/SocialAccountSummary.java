@@ -6,6 +6,7 @@ public record SocialAccountSummary(
         UUID id,
         String platform,
         String name,
-        String profileUrl
+        String profileUrl,
+        String footerText
 ) {
 }

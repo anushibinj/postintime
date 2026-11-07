@@ -5,6 +5,7 @@ import com.postintime.media.StorageService;
 import com.postintime.post.Post;
 import com.postintime.publishing.domain.PublishContext;
 import com.postintime.publishing.domain.PublishResult;
+import com.postintime.social.FooterText;
 import com.postintime.social.Platform;
 import com.postintime.social.PostingMode;
 import com.postintime.social.SocialAccount;
@@ -61,7 +62,8 @@ public class WebhookSocialMediaPublisher implements SocialMediaPublisher {
                 multipart.addFile("media", filename, media.getContentType(), bytes);
             }
             multipart.addText("title", post.getTitle() == null ? "" : post.getTitle());
-            multipart.addText("caption", post.getCaption() == null ? "" : post.getCaption());
+            multipart.addText("caption",
+                    FooterText.appendTo(post.getCaption(), account.getFooterText(), account.getPlatform()));
             contentType = multipart.contentTypeHeader();
             body = multipart.build();
         } catch (Exception ex) {
