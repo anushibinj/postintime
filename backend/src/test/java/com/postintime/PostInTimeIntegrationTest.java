@@ -200,6 +200,52 @@ class PostInTimeIntegrationTest {
     }
 
     @Test
+    void bulkDeletePostsRemovesOwnedPosts() throws Exception {
+        UUID first = createPost(user1Token, techChannelId, "Bulk Delete A");
+        UUID second = createPost(user1Token, techChannelId, "Bulk Delete B");
+        UUID kept = createPost(user1Token, techChannelId, "Bulk Keep");
+        String body = "{\"postIds\":[\"" + first + "\",\"" + second + "\",\"" + UUID.randomUUID() + "\"]}";
+
+        mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/bulk-delete")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletedCount").value(2));
+
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + first)
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + kept)
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void bulkDeletePostsRejectsOtherUsersChannel() throws Exception {
+        UUID postId = createPost(user1Token, techChannelId, "Not Yours");
+        String body = "{\"postIds\":[\"" + postId + "\"]}";
+
+        mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/bulk-delete")
+                        .header("Authorization", "Bearer " + user2Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId + "/posts/" + postId)
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void bulkDeletePostsRejectsEmptySelection() throws Exception {
+        mockMvc.perform(post("/api/v1/channels/" + techChannelId + "/posts/bulk-delete")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"postIds\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void disabledAccountCannotBeTargeted() throws Exception {
         UUID postId = createPost(user1Token, techChannelId, "Target Test");
         UUID accountId = createSocialAccount(user1Token, techChannelId, "youtube", "Tech YT");
