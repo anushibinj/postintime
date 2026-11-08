@@ -56,6 +56,12 @@ public class PostController {
         return postService.updatePost(channelId, postId, request);
     }
 
+    @PostMapping("/bulk-delete")
+    public BulkDeletePostsResponse bulkDeletePosts(@PathVariable UUID channelId,
+                                                   @Valid @RequestBody BulkDeletePostsRequest request) {
+        return postService.bulkDeletePosts(channelId, request);
+    }
+
     @DeleteMapping("/{postId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletePost(@PathVariable UUID channelId, @PathVariable UUID postId) {

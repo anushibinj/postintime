@@ -136,6 +136,14 @@ public class PostService {
         postRepository.delete(post);
     }
 
+    @Transactional
+    public BulkDeletePostsResponse bulkDeletePosts(UUID channelId, BulkDeletePostsRequest request) {
+        channelService.getOwnedChannel(channelId);
+        List<Post> posts = postRepository.findByChannelIdAndIdIn(channelId, request.postIds());
+        postRepository.deleteAll(posts);
+        return new BulkDeletePostsResponse(posts.size());
+    }
+
     public Post getOwnedPost(UUID channelId, UUID postId) {
         channelService.getOwnedChannel(channelId);
         return postRepository.findByIdAndChannelId(postId, channelId)
