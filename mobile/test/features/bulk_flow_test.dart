@@ -90,6 +90,27 @@ void main() {
     expect(opened.app.backend.log.length, before, reason: 'no request is sent for a locked post');
   });
 
+  testWidgets('bulk delete removes the selected posts after confirmation', (tester) async {
+    final opened = await openChannelWithPosts(tester);
+    await tester.tap(find.text('Select page'));
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete 3 posts?'), findsOneWidget);
+    await tapText(tester, 'Cancel');
+    expect(opened.app.backend.posts[opened.channelId], hasLength(3));
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(opened.app.backend.posts[opened.channelId], isEmpty);
+    expect(find.text('Deleted 3 posts'), findsOneWidget);
+    expect(find.text('3 selected'), findsNothing);
+  });
+
   testWidgets('clearing the selection hides the bulk actions', (tester) async {
     await openChannelWithPosts(tester);
     await tester.tap(find.text('Select page'));

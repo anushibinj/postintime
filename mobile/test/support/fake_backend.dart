@@ -258,6 +258,19 @@ class FakeBackend {
         return (201, _postJson(post));
       }
     }
+    m = match('/api/v1/channels/([^/]+)/posts/bulk-delete');
+    if (m != null && method == 'POST') {
+      final channelId = m.group(1)!;
+      var deleted = 0;
+      for (final id in (json['postIds']! as List).cast<String>()) {
+        final post = _findPost(channelId, id);
+        if (post != null) {
+          posts[channelId]!.remove(post);
+          deleted++;
+        }
+      }
+      return (200, {'deletedCount': deleted});
+    }
     m = match('/api/v1/channels/([^/]+)/posts/([^/]+)');
     if (m != null) {
       final channelId = m.group(1)!;
