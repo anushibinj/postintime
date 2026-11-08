@@ -1,15 +1,15 @@
-import { Button, Checkbox, Space, Typography, message } from 'antd';
+import { Button, Checkbox, Modal, Space, Typography, message } from 'antd';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { fetchChannel } from '../../api/channels';
-import { usePosts } from '../../hooks/usePosts';
+import { useBulkDeletePosts, usePosts } from '../../hooks/usePosts';
 import { useSocialAccounts } from '../../hooks/useSocialAccounts';
 import { useBulkPublishJobs, useBulkPublishMutations } from '../../hooks/useBulkPublish';
 import { queueTail } from '../../hooks/bulkPublishTime';
 import { parsePageParam, parseSizeParam } from '../../hooks/postListParams';
 import { PageLoader } from '../../components/PageLoader/PageLoader';
-import { ArrowLeft, Plus, Send } from 'lucide-react';
+import { ArrowLeft, Plus, Send, Trash2 } from 'lucide-react';
 import type { Post } from '../../types';
 
 const PostList = lazy(() => import('../../components/PostCard/PostCard'));
@@ -35,6 +35,7 @@ export function ChannelDetailPage() {
   const { data: accounts = [] } = useSocialAccounts(channelId);
   const { create: createBulkJob } = useBulkPublishMutations(channelId!);
   const { data: bulkJobs = [] } = useBulkPublishJobs(channelId);
+  const bulkDeletePosts = useBulkDeletePosts(channelId!);
   const [selection, setSelection] = useState<Selection>({ posts: new Map() });
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
@@ -81,6 +82,25 @@ export function ChannelDetailPage() {
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Could not start bulk posting');
     }
+  };
+
+  const handleBulkDelete = () => {
+    const count = selected.size;
+    Modal.confirm({
+      title: `Delete ${count} ${count === 1 ? 'post' : 'posts'}?`,
+      content: 'The selected posts and their publish status will be permanently removed. This cannot be undone.',
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const result = await bulkDeletePosts.mutateAsync([...selected.keys()]);
+          message.success(`Deleted ${result.deletedCount} ${result.deletedCount === 1 ? 'post' : 'posts'}`);
+          setSelection({ channelId, posts: new Map() });
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : 'Could not delete posts');
+        }
+      },
+    });
   };
 
   if (!channel) return null;
@@ -134,6 +154,14 @@ export function ChannelDetailPage() {
                   </Button>
                   <Button icon={<Send size={14} />} onClick={() => setBulkModalOpen(true)}>
                     Bulk post
+                  </Button>
+                  <Button
+                    danger
+                    icon={<Trash2 size={14} />}
+                    loading={bulkDeletePosts.isPending}
+                    onClick={handleBulkDelete}
+                  >
+                    Delete
                   </Button>
                 </>
               )}
