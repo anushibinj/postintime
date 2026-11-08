@@ -73,6 +73,27 @@ class _ChannelDetailPageState extends ConsumerState<ChannelDetailPage> {
     });
   }
 
+  Future<void> _deleteSelected() async {
+    final count = _selected.length;
+    final confirmed = await confirmDialog(
+      context,
+      title: 'Delete $count ${count == 1 ? 'post' : 'posts'}?',
+      content: 'The selected posts and their publish status will be permanently removed. This cannot be undone.',
+      okText: 'Delete',
+      danger: true,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+    try {
+      final deleted = await ref.read(postActionsProvider(widget.channelId)).bulkDelete(_selected.keys.toList());
+      Toast.success('Deleted $deleted ${deleted == 1 ? 'post' : 'posts'}');
+      setState(_selected.clear);
+    } catch (error) {
+      Toast.error(errorMessage(error, 'Could not delete posts'));
+    }
+  }
+
   void _openBulkSheet() {
     final posts = [for (final entry in _selected.entries) BulkPublishSelection(id: entry.key, title: entry.value)];
     showFormSheet<void>(
@@ -189,6 +210,12 @@ class _ChannelDetailPageState extends ConsumerState<ChannelDetailPage> {
                         onPressed: _openBulkSheet,
                         icon: const Icon(Icons.send, size: 16),
                         label: const Text('Bulk post'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _deleteSelected,
+                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Delete'),
                       ),
                     ],
                   ],
