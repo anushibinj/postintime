@@ -32,6 +32,9 @@ class PostFilters {
   int get hashCode => Object.hash(page, size, search, status, sort);
 }
 
+/// The backend accepts at most this many IDs per bulk delete request.
+const int bulkDeleteLimit = 100;
+
 class PostsApi {
   PostsApi(this._client);
 
@@ -79,5 +82,19 @@ class PostsApi {
 
   Future<void> deletePost(String channelId, String postId) async {
     await _client.delete('/api/v1/channels/$channelId/posts/$postId');
+  }
+
+  /// Deletes the posts in batches of [bulkDeleteLimit] IDs and resolves to how many the server removed.
+  Future<int> bulkDeletePosts(String channelId, List<String> postIds) async {
+    var deleted = 0;
+    for (var start = 0; start < postIds.length; start += bulkDeleteLimit) {
+      final chunk = postIds.skip(start).take(bulkDeleteLimit).toList();
+      final json = await _client.post(
+        '/api/v1/channels/$channelId/posts/bulk-delete',
+        body: {'postIds': chunk},
+      ) as Map<String, dynamic>;
+      deleted += json['deletedCount'] as int;
+    }
+    return deleted;
   }
 }

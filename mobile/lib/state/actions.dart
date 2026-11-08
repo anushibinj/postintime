@@ -73,6 +73,15 @@ class PostActions {
     _ref.invalidate(channelsProvider);
     _ref.invalidate(channelProvider(channelId));
   }
+
+  /// Deletes several posts at once and resolves to how many the server removed.
+  Future<int> bulkDelete(List<String> postIds) async {
+    final deleted = await _ref.read(postsApiProvider).bulkDeletePosts(channelId, postIds);
+    _ref.invalidate(postsProvider);
+    _ref.invalidate(channelsProvider);
+    _ref.invalidate(channelProvider(channelId));
+    return deleted;
+  }
 }
 
 final postActionsProvider = Provider.family<PostActions, String>((ref, channelId) => PostActions(ref, channelId));
