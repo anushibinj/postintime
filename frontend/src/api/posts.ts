@@ -51,3 +51,23 @@ export async function updatePost(channelId: string, postId: string, data: Partia
 export async function deletePost(channelId: string, postId: string): Promise<void> {
   return apiFetch<void>(`/api/v1/channels/${channelId}/posts/${postId}`, { method: 'DELETE' });
 }
+
+/** The backend accepts at most this many IDs per bulk delete request. */
+export const BULK_DELETE_LIMIT = 100;
+
+export interface BulkDeletePostsResult {
+  deletedCount: number;
+}
+
+export async function bulkDeletePosts(channelId: string, postIds: string[]): Promise<BulkDeletePostsResult> {
+  let deletedCount = 0;
+  for (let start = 0; start < postIds.length; start += BULK_DELETE_LIMIT) {
+    const chunk = postIds.slice(start, start + BULK_DELETE_LIMIT);
+    const result = await apiFetch<BulkDeletePostsResult>(`/api/v1/channels/${channelId}/posts/bulk-delete`, {
+      method: 'POST',
+      body: JSON.stringify({ postIds: chunk }),
+    });
+    deletedCount += result.deletedCount;
+  }
+  return { deletedCount };
+}

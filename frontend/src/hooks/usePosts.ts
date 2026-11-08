@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchPosts, fetchPost, createPost, updatePost, deletePost, type PostFilters } from '../api/posts';
+import { fetchPosts, fetchPost, createPost, updatePost, deletePost, bulkDeletePosts, type PostFilters } from '../api/posts';
 
 export function usePosts(channelId: string | undefined, filters: PostFilters = {}) {
   return useQuery({
@@ -43,6 +43,17 @@ export function useDeletePost(channelId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (postId: string) => deletePost(channelId, postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts', channelId] });
+      queryClient.invalidateQueries({ queryKey: ['channels'] });
+    },
+  });
+}
+
+export function useBulkDeletePosts(channelId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (postIds: string[]) => bulkDeletePosts(channelId, postIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts', channelId] });
       queryClient.invalidateQueries({ queryKey: ['channels'] });
