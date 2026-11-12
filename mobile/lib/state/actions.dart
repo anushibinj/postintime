@@ -18,18 +18,46 @@ class ChannelActions {
     }
   }
 
-  Future<Channel> create({required String name, required String slug, String? description}) async {
+  Future<Channel> create({
+    required String name,
+    required String slug,
+    String? description,
+    bool? autopublishEnabled,
+    int? autopublishThreshold,
+  }) async {
     final channel = await _ref
         .read(channelsApiProvider)
-        .createChannel(name: name, slug: slug, description: description);
+        .createChannel(
+          name: name,
+          slug: slug,
+          description: description,
+          autopublishEnabled: autopublishEnabled,
+          autopublishThreshold: autopublishThreshold,
+        );
     _refresh();
     return channel;
   }
 
-  Future<Channel> update(String channelId, {String? name, String? slug, String? description, bool? enabled}) async {
+  Future<Channel> update(
+    String channelId, {
+    String? name,
+    String? slug,
+    String? description,
+    bool? enabled,
+    bool? autopublishEnabled,
+    int? autopublishThreshold,
+  }) async {
     final channel = await _ref
         .read(channelsApiProvider)
-        .updateChannel(channelId, name: name, slug: slug, description: description, enabled: enabled);
+        .updateChannel(
+          channelId,
+          name: name,
+          slug: slug,
+          description: description,
+          enabled: enabled,
+          autopublishEnabled: autopublishEnabled,
+          autopublishThreshold: autopublishThreshold,
+        );
     _refresh(channelId);
     return channel;
   }
