@@ -83,6 +83,7 @@ void main() {
     expect(slug.enabled, isFalse);
 
     await enterField(tester, 'Name', 'Tech daily');
+    await tester.ensureVisible(find.widgetWithText(SwitchListTile, 'Enabled'));
     await tester.tap(find.widgetWithText(SwitchListTile, 'Enabled'));
     await tester.pump();
     await tapText(tester, 'OK');

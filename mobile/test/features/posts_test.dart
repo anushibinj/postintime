@@ -53,6 +53,19 @@ void main() {
     expect(find.text('Autopublished · score 85'), findsOneWidget);
   });
 
+  test('the fake backend autopublishes only scores at or above the threshold', () async {
+    final app = await createApp();
+    final channel = app.backend.addChannel(name: 'Jobs', slug: 'jobs', autopublishEnabled: true, autopublishThreshold: 70);
+    final posts = app.client;
+    Future<Object?> create(String title, int score) =>
+        posts.post('/api/v1/channels/${channel['id']}/posts', body: {'title': title, 'autopublishScore': score});
+    final high = await create('High', 70) as Map<String, dynamic>;
+    final low = await create('Low', 69) as Map<String, dynamic>;
+    expect(high['autopublished'], isTrue);
+    expect(high['status'], 'ready');
+    expect(low['autopublished'], isNot(isTrue));
+  });
+
   testWidgets('each post row is one named, tappable item for screen readers', (tester) async {
     final semantics = tester.ensureSemantics();
     await openChannel(

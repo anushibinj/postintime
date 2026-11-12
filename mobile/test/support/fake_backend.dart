@@ -265,6 +265,16 @@ class FakeBackend {
           status: json['status'] as String? ?? 'draft',
           media: _mediaById(json['mediaId'] as String?),
         );
+        // Mirrors the backend: a score at or above an enabled channel's threshold autopublishes.
+        final score = json['autopublishScore'] as int?;
+        final channel = channels[channelId]!;
+        post['autopublishScore'] = score;
+        if (score != null &&
+            channel['autopublishEnabled'] == true &&
+            score >= (channel['autopublishThreshold'] as int)) {
+          post['autopublished'] = true;
+          post['status'] = 'ready';
+        }
         return (201, _postJson(post));
       }
     }
