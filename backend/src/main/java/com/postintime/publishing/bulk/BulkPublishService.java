@@ -74,12 +74,12 @@ public class BulkPublishService {
                     .orElseThrow(() -> new ResourceNotFoundException("Post not found.")));
         }
 
-        return toResponse(enqueue(channel, interval, accounts, posts));
+        return toResponse(enqueue(channel, interval, accounts, posts, false));
     }
 
     /**
      * Queues a post whose score reached its channel's autopublish threshold, to every enabled webhook
-     * account of the channel, at the default interval. A channel without webhook accounts cannot
+     * account of the channel, due right now: it does not wait behind the queue or for an interval. A channel without webhook accounts cannot
      * publish anything on its own; that is not an error, the post then simply stays as it is.
      *
      * @return whether the post was queued
@@ -92,11 +92,12 @@ public class BulkPublishService {
         if (accounts.isEmpty()) {
             return false;
         }
-        enqueue(channel, DEFAULT_INTERVAL_MINUTES, accounts, List.of(post));
+        enqueue(channel, 0, accounts, List.of(post), true);
         return true;
     }
 
-    private BulkPublishJob enqueue(Channel channel, int interval, List<SocialAccount> accounts, List<Post> posts) {
+    private BulkPublishJob enqueue(Channel channel, int interval, List<SocialAccount> accounts, List<Post> posts,
+                                    boolean immediate) {
         UUID channelId = channel.getId();
         // Serialize appends so two batches never compute the same queue tail.
         jobRepository.lockChannelQueue(channelId);
@@ -112,7 +113,7 @@ public class BulkPublishService {
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         Instant tail = itemRepository.findQueueTail(channelId, BulkPublishItemStatus.PENDING);
         Duration gap = Duration.ofMinutes(interval);
-        Instant slot = tail == null || tail.plus(gap).isBefore(now) ? now : tail.plus(gap);
+        Instant slot = immediate || tail == null || tail.plus(gap).isBefore(now) ? now : tail.plus(gap);
 
         BulkPublishJob job = new BulkPublishJob();
         job.setChannel(channel);
