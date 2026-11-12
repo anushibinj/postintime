@@ -74,6 +74,30 @@ public class BulkPublishService {
                     .orElseThrow(() -> new ResourceNotFoundException("Post not found.")));
         }
 
+        return toResponse(enqueue(channel, interval, accounts, posts));
+    }
+
+    /**
+     * Queues a post whose score reached its channel's autopublish threshold, to every enabled webhook
+     * account of the channel, at the default interval. A channel without webhook accounts cannot
+     * publish anything on its own; that is not an error, the post then simply stays as it is.
+     *
+     * @return whether the post was queued
+     */
+    @Transactional
+    public boolean autopublish(Channel channel, Post post) {
+        List<SocialAccount> accounts = socialAccountRepository.findByChannelIdOrderByNameAsc(channel.getId()).stream()
+                .filter(account -> account.isEnabled() && account.getPostingMode() == PostingMode.WEBHOOK)
+                .toList();
+        if (accounts.isEmpty()) {
+            return false;
+        }
+        enqueue(channel, DEFAULT_INTERVAL_MINUTES, accounts, List.of(post));
+        return true;
+    }
+
+    private BulkPublishJob enqueue(Channel channel, int interval, List<SocialAccount> accounts, List<Post> posts) {
+        UUID channelId = channel.getId();
         // Serialize appends so two batches never compute the same queue tail.
         jobRepository.lockChannelQueue(channelId);
         List<BulkPublishItem> alreadyQueued = itemRepository.findByPostIdInAndStatusIn(
@@ -104,7 +128,7 @@ public class BulkPublishService {
             job.getItems().add(item);
             slot = slot.plus(gap);
         }
-        return toResponse(jobRepository.save(job));
+        return jobRepository.save(job);
     }
 
     /** Every job that still has queued posts, followed by the most recent finished ones. */
