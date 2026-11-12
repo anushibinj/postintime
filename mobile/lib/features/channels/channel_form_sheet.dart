@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/models.dart';
@@ -24,6 +25,8 @@ class _ChannelFormSheetState extends ConsumerState<ChannelFormSheet> {
   late final _slug = TextEditingController(text: widget.channel?.slug);
   late final _description = TextEditingController(text: widget.channel?.description);
   late bool _enabled = widget.channel?.enabled ?? true;
+  late bool _autopublish = widget.channel?.autopublishEnabled ?? false;
+  late final _threshold = TextEditingController(text: '${widget.channel?.autopublishThreshold ?? 80}');
   bool _saving = false;
 
   bool get _editing => widget.channel != null;
@@ -33,6 +36,7 @@ class _ChannelFormSheetState extends ConsumerState<ChannelFormSheet> {
     _name.dispose();
     _slug.dispose();
     _description.dispose();
+    _threshold.dispose();
     super.dispose();
   }
 
@@ -42,6 +46,7 @@ class _ChannelFormSheetState extends ConsumerState<ChannelFormSheet> {
     }
     setState(() => _saving = true);
     final actions = ref.read(channelActionsProvider);
+    final threshold = int.parse(_threshold.text.trim());
     try {
       if (_editing) {
         await actions.update(
@@ -50,9 +55,17 @@ class _ChannelFormSheetState extends ConsumerState<ChannelFormSheet> {
           slug: _slug.text.trim(),
           description: _description.text,
           enabled: _enabled,
+          autopublishEnabled: _autopublish,
+          autopublishThreshold: threshold,
         );
       } else {
-        await actions.create(name: _name.text.trim(), slug: _slug.text.trim(), description: _description.text);
+        await actions.create(
+          name: _name.text.trim(),
+          slug: _slug.text.trim(),
+          description: _description.text,
+          autopublishEnabled: _autopublish,
+          autopublishThreshold: threshold,
+        );
       }
       if (!mounted) {
         return;
@@ -110,6 +123,27 @@ class _ChannelFormSheetState extends ConsumerState<ChannelFormSheet> {
               maxLines: 5,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(labelText: 'Description'),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Autopublish'),
+              subtitle: const Text('Publish a new post automatically when its score is at or above the threshold.'),
+              value: _autopublish,
+              onChanged: (value) => setState(() => _autopublish = value),
+            ),
+            TextFormField(
+              controller: _threshold,
+              enabled: _autopublish,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Autopublish threshold',
+                helperText: 'Score out of 100',
+              ),
+              validator: (value) {
+                final score = int.tryParse((value ?? '').trim());
+                return score == null || score < 0 || score > 100 ? 'Enter a score from 0 to 100' : null;
+              },
             ),
             if (_editing)
               SwitchListTile(

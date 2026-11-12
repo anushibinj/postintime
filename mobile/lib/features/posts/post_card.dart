@@ -138,6 +138,15 @@ class _PostCardState extends ConsumerState<PostCard> {
                                       style: AppText.secondary,
                                     ),
                                   ),
+                                if (post.autopublished)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: AppTag(
+                                      'Autopublished · score ${post.autopublishScore}',
+                                      tone: TagTone.processing,
+                                      icon: Icons.bolt,
+                                    ),
+                                  ),
                                 if (queuedAt != null)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6),
