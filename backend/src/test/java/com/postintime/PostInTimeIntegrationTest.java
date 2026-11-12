@@ -1070,6 +1070,103 @@ class PostInTimeIntegrationTest {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("token").asText();
     }
 
+    @Test
+    void channelStoresAutopublishSettingsAndValidatesThreshold() throws Exception {
+        mockMvc.perform(get("/api/v1/channels/" + techChannelId)
+                        .header("Authorization", "Bearer " + user1Token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.autopublishEnabled").value(false))
+                .andExpect(jsonPath("$.autopublishThreshold").value(80));
+
+        mockMvc.perform(patch("/api/v1/channels/" + techChannelId)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"autopublishEnabled\":true,\"autopublishThreshold\":65}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.autopublishEnabled").value(true))
+                .andExpect(jsonPath("$.autopublishThreshold").value(65));
+
+        mockMvc.perform(patch("/api/v1/channels/" + techChannelId)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"autopublishThreshold\":101}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void postAtOrAboveTheThresholdIsQueuedForPublishing() throws Exception {
+        String base = "/api/v1/channels/" + techChannelId;
+        mockMvc.perform(post(base + "/social-accounts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"platform\":\"x\",\"name\":\"Hook\",\"postingMode\":\"webhook\","
+                                + "\"webhookUrl\":\"http://127.0.0.1:9/hook\",\"webhookAuthType\":\"none\"}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(patch(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"autopublishEnabled\":true,\"autopublishThreshold\":80}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Great\",\"autopublishScore\":80}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublishScore").value(80))
+                .andExpect(jsonPath("$.autopublished").value(true))
+                .andExpect(jsonPath("$.status").value("ready"))
+                .andExpect(jsonPath("$.bulkPublishScheduledAt").isNotEmpty());
+
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Meh\",\"autopublishScore\":79}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublished").value(false))
+                .andExpect(jsonPath("$.status").value("draft"))
+                .andExpect(jsonPath("$.bulkPublishScheduledAt").value(org.hamcrest.Matchers.nullValue()));
+
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"No score\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublished").value(false));
+
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Bad\",\"autopublishScore\":101}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void highScoreDoesNothingWhenAutopublishIsOffOrChannelHasNoWebhookAccount() throws Exception {
+        String base = "/api/v1/channels/" + techChannelId;
+        // Autopublish off by default.
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Off\",\"autopublishScore\":100}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublished").value(false));
+
+        // On, but no webhook account to publish to: the post is still created, just not queued.
+        mockMvc.perform(patch(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"autopublishEnabled\":true,\"autopublishThreshold\":0}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Nowhere\",\"autopublishScore\":100}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublished").value(false))
+                .andExpect(jsonPath("$.bulkPublishScheduledAt").value(org.hamcrest.Matchers.nullValue()));
+    }
+
     private UUID createChannel(String token, String name, String slug) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/channels")
                         .header("Authorization", "Bearer " + token)
