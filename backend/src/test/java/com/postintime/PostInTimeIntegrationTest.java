@@ -1143,6 +1143,34 @@ class PostInTimeIntegrationTest {
     }
 
     @Test
+    void thresholdZeroAutopublishesEveryPostEvenWithoutAScore() throws Exception {
+        String base = "/api/v1/channels/" + techChannelId;
+        for (String name : new String[] {"HookA", "HookB"}) {
+            mockMvc.perform(post(base + "/social-accounts")
+                            .header("Authorization", "Bearer " + user1Token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"platform\":\"x\",\"name\":\"" + name + "\",\"postingMode\":\"webhook\","
+                                    + "\"webhookUrl\":\"http://127.0.0.1:9/hook\",\"webhookAuthType\":\"none\"}"))
+                    .andExpect(status().isCreated());
+        }
+        mockMvc.perform(patch(base)
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"autopublishEnabled\":true,\"autopublishThreshold\":0}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post(base + "/posts")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"No score\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublishScore").value(0))
+                .andExpect(jsonPath("$.autopublished").value(true))
+                .andExpect(jsonPath("$.status").value("ready"))
+                .andExpect(jsonPath("$.bulkPublishScheduledAt").isNotEmpty());
+    }
+
+    @Test
     void highScoreDoesNothingWhenAutopublishIsOffOrChannelHasNoWebhookAccount() throws Exception {
         String base = "/api/v1/channels/" + techChannelId;
         // Autopublish off by default.
