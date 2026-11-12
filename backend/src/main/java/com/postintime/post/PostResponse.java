@@ -13,8 +13,8 @@ public record PostResponse(
         String caption,
         MediaResponse media,
         String status,
-        // The score the sender gave the post (0-100); null when it gave none.
-        Integer autopublishScore,
+        // The score the sender gave the post (0-100); 0 when it gave none.
+        int autopublishScore,
         // True when the post was queued for publishing because its score reached the channel's threshold.
         boolean autopublished,
         PublicationSummaryResponse publicationSummary,

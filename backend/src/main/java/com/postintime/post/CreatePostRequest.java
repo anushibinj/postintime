@@ -22,7 +22,7 @@ public record CreatePostRequest(
         @Min(0) @Max(100)
         @Schema(description = "Optional autopublish score from 0 to 100. When the channel has autopublish on and the "
                 + "score is at or above its threshold, the post is queued for publishing right away.",
-                example = "85", minimum = "0", maximum = "100")
+                example = "85", defaultValue = "0", minimum = "0", maximum = "100")
         Integer autopublishScore
 ) {
 }

@@ -28,8 +28,9 @@ class ChannelAutopublishTest {
     }
 
     @Test
-    void neverAcceptsAPostWithoutAScore() {
-        assertThat(channel(true, 0).accepts(null)).isFalse();
+    void aPostWithoutAScoreCountsAsZero() {
+        assertThat(channel(true, 1).accepts(0)).isFalse();
+        assertThat(channel(true, 0).accepts(0)).isTrue();
     }
 
     @Test

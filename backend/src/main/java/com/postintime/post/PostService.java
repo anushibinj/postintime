@@ -90,7 +90,7 @@ public class PostService {
         post.setTitle(request.title());
         post.setCaption(request.caption());
         post.setStatus(parseStatusRequired(request.status()));
-        post.setAutopublishScore(request.autopublishScore());
+        post.setAutopublishScore(request.autopublishScore() == null ? 0 : request.autopublishScore());
         if (request.mediaId() != null) {
             post.setMedia(mediaService.getOwnedMedia(request.mediaId()));
         }

@@ -56,8 +56,8 @@ public class Channel {
     private Instant updatedAt;
 
     /** True when a post with this score should be published without anyone pressing a button. */
-    public boolean accepts(Integer autopublishScore) {
-        return autopublishEnabled && autopublishScore != null && autopublishScore >= autopublishThreshold;
+    public boolean accepts(int autopublishScore) {
+        return autopublishEnabled && autopublishScore >= autopublishThreshold;
     }
 
     @PrePersist

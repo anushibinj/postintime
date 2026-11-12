@@ -1132,6 +1132,7 @@ class PostInTimeIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"No score\"}"))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.autopublishScore").value(0))
                 .andExpect(jsonPath("$.autopublished").value(false));
 
         mockMvc.perform(post(base + "/posts")

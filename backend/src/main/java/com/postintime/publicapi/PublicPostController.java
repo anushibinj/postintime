@@ -75,7 +75,7 @@ public class PublicPostController {
             @RequestParam(required = false) String caption,
             @RequestParam(required = false) UUID mediaId,
             @RequestParam(required = false) String status,
-            @Parameter(description = "Autopublish score from 0 to 100. At or above the channel's threshold the post is queued for publishing.")
+            @Parameter(description = "Optional autopublish score from 0 to 100 (0 when omitted). At or above the channel's threshold the post is queued for publishing.")
             @RequestParam(required = false) Integer autopublishScore,
             @Parameter(description = "Image file. Form field name: media.")
             @RequestParam(value = "media", required = false) MultipartFile media) {

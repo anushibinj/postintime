@@ -47,9 +47,9 @@ public class Post {
     @Column(nullable = false, length = 30)
     private PostStatus status = PostStatus.DRAFT;
 
-    /** Score (0-100) the sender gave this post; compared with the channel's autopublish threshold. */
-    @Column(name = "autopublish_score")
-    private Integer autopublishScore;
+    /** Score (0-100) the sender gave this post, 0 when it gave none; compared with the channel's autopublish threshold. */
+    @Column(name = "autopublish_score", nullable = false)
+    private int autopublishScore = 0;
 
     @Column(nullable = false)
     private boolean autopublished = false;
