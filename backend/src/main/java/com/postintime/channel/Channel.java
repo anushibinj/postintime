@@ -55,6 +55,11 @@ public class Channel {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /** True when a post with this score should be published without anyone pressing a button. */
+    public boolean accepts(Integer autopublishScore) {
+        return autopublishEnabled && autopublishScore != null && autopublishScore >= autopublishThreshold;
+    }
+
     @PrePersist
     void onCreate() {
         if (id == null) {

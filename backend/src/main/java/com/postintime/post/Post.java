@@ -51,6 +51,9 @@ public class Post {
     @Column(name = "autopublish_score")
     private Integer autopublishScore;
 
+    @Column(nullable = false)
+    private boolean autopublished = false;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
