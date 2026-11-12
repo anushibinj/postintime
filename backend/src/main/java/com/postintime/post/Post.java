@@ -47,6 +47,10 @@ public class Post {
     @Column(nullable = false, length = 30)
     private PostStatus status = PostStatus.DRAFT;
 
+    /** Score (0-100) the sender gave this post; compared with the channel's autopublish threshold. */
+    @Column(name = "autopublish_score")
+    private Integer autopublishScore;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

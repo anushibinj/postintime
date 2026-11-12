@@ -9,6 +9,8 @@ public record ChannelResponse(
         String slug,
         String description,
         boolean enabled,
+        boolean autopublishEnabled,
+        int autopublishThreshold,
         long postCount,
         long socialAccountCount,
         Instant createdAt,
