@@ -32,6 +32,9 @@ public class BulkPublishService {
     public static final int MAX_INTERVAL_MINUTES = 30;
     public static final int INTERVAL_STEP_MINUTES = 5;
 
+    /** Autopublished posts join the queue back to back: no wait after the post before them. */
+    static final int AUTOPUBLISH_INTERVAL_MINUTES = 0;
+
     private static final int RECENT_JOBS_LIMIT = 10;
 
     /** Statuses of posts that are still in the queue: waiting for their slot or being posted. */
@@ -74,12 +77,13 @@ public class BulkPublishService {
                     .orElseThrow(() -> new ResourceNotFoundException("Post not found.")));
         }
 
-        return toResponse(enqueue(channel, interval, accounts, posts, false));
+        return toResponse(enqueue(channel, interval, accounts, posts));
     }
 
     /**
      * Queues a post whose score reached its channel's autopublish threshold, to every enabled webhook
-     * account of the channel, due right now: it does not wait behind the queue or for an interval. A channel without webhook accounts cannot
+     * account of the channel, exactly as if it were bulk published with a 0 minute interval: it goes to the end of the
+     * channel's queue and is due as soon as the posts before it have gone out. A channel without webhook accounts cannot
      * publish anything on its own; that is not an error, the post then simply stays as it is.
      *
      * @return whether the post was queued
@@ -92,12 +96,11 @@ public class BulkPublishService {
         if (accounts.isEmpty()) {
             return false;
         }
-        enqueue(channel, 0, accounts, List.of(post), true);
+        enqueue(channel, AUTOPUBLISH_INTERVAL_MINUTES, accounts, List.of(post));
         return true;
     }
 
-    private BulkPublishJob enqueue(Channel channel, int interval, List<SocialAccount> accounts, List<Post> posts,
-                                    boolean immediate) {
+    private BulkPublishJob enqueue(Channel channel, int interval, List<SocialAccount> accounts, List<Post> posts) {
         UUID channelId = channel.getId();
         // Serialize appends so two batches never compute the same queue tail.
         jobRepository.lockChannelQueue(channelId);
@@ -113,7 +116,7 @@ public class BulkPublishService {
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         Instant tail = itemRepository.findQueueTail(channelId, BulkPublishItemStatus.PENDING);
         Duration gap = Duration.ofMinutes(interval);
-        Instant slot = immediate || tail == null || tail.plus(gap).isBefore(now) ? now : tail.plus(gap);
+        Instant slot = tail == null || tail.plus(gap).isBefore(now) ? now : tail.plus(gap);
 
         BulkPublishJob job = new BulkPublishJob();
         job.setChannel(channel);
