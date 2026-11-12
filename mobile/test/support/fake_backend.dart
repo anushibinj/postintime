@@ -41,7 +41,13 @@ class FakeBackend {
     return '${part({'alg': 'HS256'})}.${part({'sub': sub, 'email': email, 'exp': exp})}.signature';
   }
 
-  Map<String, dynamic> addChannel({required String name, required String slug, String? description}) {
+  Map<String, dynamic> addChannel({
+    required String name,
+    required String slug,
+    String? description,
+    bool autopublishEnabled = false,
+    int autopublishThreshold = 80,
+  }) {
     final id = nextId('channel');
     final stamp = _stamp();
     final channel = {
@@ -50,6 +56,8 @@ class FakeBackend {
       'slug': slug,
       'description': description,
       'enabled': true,
+      'autopublishEnabled': autopublishEnabled,
+      'autopublishThreshold': autopublishThreshold,
       'createdAt': stamp,
       'updatedAt': stamp,
     };
@@ -221,6 +229,8 @@ class FakeBackend {
           name: json['name']! as String,
           slug: json['slug']! as String,
           description: json['description'] as String?,
+          autopublishEnabled: json['autopublishEnabled'] as bool? ?? false,
+          autopublishThreshold: json['autopublishThreshold'] as int? ?? 80,
         );
         return (201, _channelJson(channel));
       }
@@ -231,7 +241,7 @@ class FakeBackend {
       if (channel == null) return (404, {'message': 'Channel not found', 'code': 'NOT_FOUND'});
       if (method == 'GET') return (200, _channelJson(channel));
       if (method == 'PATCH') {
-        for (final key in ['name', 'slug', 'description', 'enabled']) {
+        for (final key in ['name', 'slug', 'description', 'enabled', 'autopublishEnabled', 'autopublishThreshold']) {
           if (json.containsKey(key)) channel[key] = json[key];
         }
         channel['updatedAt'] = _stamp();

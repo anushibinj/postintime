@@ -39,6 +39,20 @@ void main() {
     expect(find.text('1-2 of 2 posts'), findsOneWidget);
   });
 
+  testWidgets('marks a post that was autopublished with its score', (tester) async {
+    await openChannel(
+      tester,
+      seed: (backend, channelId) {
+        final post = backend.addPost(channelId, title: 'Great job', status: 'ready');
+        post['autopublished'] = true;
+        post['autopublishScore'] = 85;
+        backend.addPost(channelId, title: 'Plain job');
+      },
+    );
+
+    expect(find.text('Autopublished · score 85'), findsOneWidget);
+  });
+
   testWidgets('each post row is one named, tappable item for screen readers', (tester) async {
     final semantics = tester.ensureSemantics();
     await openChannel(
