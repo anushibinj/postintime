@@ -1,4 +1,4 @@
-import { Button, Card, Col, Empty, Form, Input, Modal, Row, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
+import { Button, Card, Col, Empty, Form, Input, InputNumber, Modal, Row, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +16,14 @@ export function ChannelsPage() {
   const navigate = useNavigate();
 
   const saveMutation = useMutation({
-    mutationFn: async (values: { name: string; slug: string; description?: string; enabled?: boolean }) => {
+    mutationFn: async (values: {
+      name: string;
+      slug: string;
+      description?: string;
+      enabled?: boolean;
+      autopublishEnabled?: boolean;
+      autopublishThreshold?: number;
+    }) => {
       if (editing) {
         return updateChannel(editing.id, values);
       }
@@ -43,6 +50,7 @@ export function ChannelsPage() {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
+    form.setFieldsValue({ autopublishEnabled: false, autopublishThreshold: 80 });
     setModalOpen(true);
   };
 
@@ -109,6 +117,11 @@ export function ChannelsPage() {
                       <Tag color={channel.enabled ? 'green' : 'default'}>
                         {channel.enabled ? 'Enabled' : 'Disabled'}
                       </Tag>
+                      {channel.autopublishEnabled && (
+                        <Tooltip title={`Posts scoring ${channel.autopublishThreshold} or more are published automatically`}>
+                          <Tag color="blue">Autopublish ≥ {channel.autopublishThreshold}</Tag>
+                        </Tooltip>
+                      )}
                     </Space>
                   }
                   description={
@@ -147,6 +160,25 @@ export function ChannelsPage() {
           </Form.Item>
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item
+            name="autopublishEnabled"
+            label="Autopublish"
+            valuePropName="checked"
+            extra="Publish a new post automatically when its score is at or above the threshold."
+          >
+            <Switch />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.autopublishEnabled !== next.autopublishEnabled}>
+            {({ getFieldValue }) => (
+              <Form.Item
+                name="autopublishThreshold"
+                label="Autopublish threshold (score out of 100)"
+                rules={[{ required: true, type: 'number', min: 0, max: 100 }]}
+              >
+                <InputNumber min={0} max={100} precision={0} disabled={!getFieldValue('autopublishEnabled')} />
+              </Form.Item>
+            )}
           </Form.Item>
           {editing && (
             <Form.Item name="enabled" label="Enabled" valuePropName="checked">
