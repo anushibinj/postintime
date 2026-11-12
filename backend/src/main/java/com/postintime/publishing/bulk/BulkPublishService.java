@@ -32,6 +32,9 @@ public class BulkPublishService {
     public static final int MAX_INTERVAL_MINUTES = 30;
     public static final int INTERVAL_STEP_MINUTES = 5;
 
+    /** Autopublished posts join the queue back to back: no wait after the post before them. */
+    static final int AUTOPUBLISH_INTERVAL_MINUTES = 0;
+
     private static final int RECENT_JOBS_LIMIT = 10;
 
     /** Statuses of posts that are still in the queue: waiting for their slot or being posted. */
@@ -74,6 +77,31 @@ public class BulkPublishService {
                     .orElseThrow(() -> new ResourceNotFoundException("Post not found.")));
         }
 
+        return toResponse(enqueue(channel, interval, accounts, posts));
+    }
+
+    /**
+     * Queues a post whose score reached its channel's autopublish threshold, to every enabled webhook
+     * account of the channel, exactly as if it were bulk published with a 0 minute interval: it goes to the end of the
+     * channel's queue and is due as soon as the posts before it have gone out. A channel without webhook accounts cannot
+     * publish anything on its own; that is not an error, the post then simply stays as it is.
+     *
+     * @return whether the post was queued
+     */
+    @Transactional
+    public boolean autopublish(Channel channel, Post post) {
+        List<SocialAccount> accounts = socialAccountRepository.findByChannelIdOrderByNameAsc(channel.getId()).stream()
+                .filter(account -> account.isEnabled() && account.getPostingMode() == PostingMode.WEBHOOK)
+                .toList();
+        if (accounts.isEmpty()) {
+            return false;
+        }
+        enqueue(channel, AUTOPUBLISH_INTERVAL_MINUTES, accounts, List.of(post));
+        return true;
+    }
+
+    private BulkPublishJob enqueue(Channel channel, int interval, List<SocialAccount> accounts, List<Post> posts) {
+        UUID channelId = channel.getId();
         // Serialize appends so two batches never compute the same queue tail.
         jobRepository.lockChannelQueue(channelId);
         List<BulkPublishItem> alreadyQueued = itemRepository.findByPostIdInAndStatusIn(
@@ -104,7 +132,7 @@ public class BulkPublishService {
             job.getItems().add(item);
             slot = slot.plus(gap);
         }
-        return toResponse(jobRepository.save(job));
+        return jobRepository.save(job);
     }
 
     /** Every job that still has queued posts, followed by the most recent finished ones. */

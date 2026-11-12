@@ -117,6 +117,11 @@ export function PostCard({ post, channelId, accounts, onSelectChange, selected =
               {post.caption}
             </Typography.Paragraph>
           )}
+          {post.autopublished && (
+            <Tag color="blue" style={{ marginTop: 6 }}>
+              Autopublished · score {post.autopublishScore}
+            </Tag>
+          )}
           {queuedAt !== null && (
             <Tag
               color="processing"

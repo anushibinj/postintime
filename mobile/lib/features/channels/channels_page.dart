@@ -137,6 +137,10 @@ class _ChannelCard extends StatelessWidget {
                           channel.enabled ? 'Enabled' : 'Disabled',
                           tone: channel.enabled ? TagTone.green : TagTone.neutral,
                         ),
+                        if (channel.autopublishEnabled) ...[
+                          const SizedBox(width: 6),
+                          AppTag('Autopublish ≥ ${channel.autopublishThreshold}', tone: TagTone.processing),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),

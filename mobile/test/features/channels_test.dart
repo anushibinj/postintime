@@ -31,6 +31,34 @@ void main() {
     expect(app.backend.channels.values.single['slug'], 'tech-news');
   });
 
+  testWidgets('saves the autopublish switch and threshold when creating a channel', (tester) async {
+    final app = await createApp();
+    await pumpApp(tester, app);
+
+    await tapText(tester, 'New Channel');
+    await enterField(tester, 'Name', 'Jobs');
+    await enterField(tester, 'Slug', 'jobs');
+    final threshold = find.widgetWithText(TextFormField, 'Autopublish threshold');
+    expect(tester.widget<TextField>(find.descendant(of: threshold, matching: find.byType(TextField))).enabled, isFalse);
+
+    await tester.ensureVisible(find.widgetWithText(SwitchListTile, 'Autopublish'));
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Autopublish'));
+    await tester.pump();
+    await enterField(tester, 'Autopublish threshold', '101');
+    await tapText(tester, 'OK');
+    expect(find.text('Enter a score from 0 to 100'), findsOneWidget);
+    expect(app.backend.channels, isEmpty);
+
+    await enterField(tester, 'Autopublish threshold', '65');
+    await tapText(tester, 'OK');
+
+    expect(find.text('Channel saved'), findsOneWidget);
+    expect(find.text('Autopublish ≥ 65'), findsOneWidget);
+    final saved = app.backend.channels.values.single;
+    expect(saved['autopublishEnabled'], isTrue);
+    expect(saved['autopublishThreshold'], 65);
+  });
+
   testWidgets('requires a name and a slug', (tester) async {
     final app = await createApp();
     await pumpApp(tester, app);
@@ -55,7 +83,8 @@ void main() {
     expect(slug.enabled, isFalse);
 
     await enterField(tester, 'Name', 'Tech daily');
-    await tester.tap(find.byType(Switch));
+    await tester.ensureVisible(find.widgetWithText(SwitchListTile, 'Enabled'));
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Enabled'));
     await tester.pump();
     await tapText(tester, 'OK');
 

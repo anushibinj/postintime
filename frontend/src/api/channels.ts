@@ -9,14 +9,19 @@ export async function fetchChannel(channelId: string): Promise<Channel> {
   return apiFetch<Channel>(`/api/v1/channels/${channelId}`);
 }
 
-export async function createChannel(data: { name: string; slug: string; description?: string }): Promise<Channel> {
+export interface AutopublishSettings {
+  autopublishEnabled?: boolean;
+  autopublishThreshold?: number;
+}
+
+export async function createChannel(data: { name: string; slug: string; description?: string } & AutopublishSettings): Promise<Channel> {
   return apiFetch<Channel>('/api/v1/channels', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
-export async function updateChannel(channelId: string, data: Partial<{ name: string; slug: string; description: string; enabled: boolean }>): Promise<Channel> {
+export async function updateChannel(channelId: string, data: Partial<{ name: string; slug: string; description: string; enabled: boolean } & AutopublishSettings>): Promise<Channel> {
   return apiFetch<Channel>(`/api/v1/channels/${channelId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),

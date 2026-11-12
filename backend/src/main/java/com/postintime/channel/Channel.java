@@ -42,11 +42,23 @@ public class Channel {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(name = "autopublish_enabled", nullable = false)
+    private boolean autopublishEnabled = false;
+
+    /** Minimum post score (0-100) that makes this channel publish a post on its own. */
+    @Column(name = "autopublish_threshold", nullable = false)
+    private int autopublishThreshold = 80;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /** True when a post with this score should be published without anyone pressing a button. */
+    public boolean accepts(int autopublishScore) {
+        return autopublishEnabled && autopublishScore >= autopublishThreshold;
+    }
 
     @PrePersist
     void onCreate() {

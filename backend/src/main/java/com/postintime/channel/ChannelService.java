@@ -45,6 +45,12 @@ public class ChannelService {
         channel.setName(request.name());
         channel.setSlug(slug);
         channel.setDescription(request.description());
+        if (request.autopublishEnabled() != null) {
+            channel.setAutopublishEnabled(request.autopublishEnabled());
+        }
+        if (request.autopublishThreshold() != null) {
+            channel.setAutopublishThreshold(request.autopublishThreshold());
+        }
         return toResponse(channelRepository.save(channel));
     }
 
@@ -67,6 +73,12 @@ public class ChannelService {
         }
         if (request.enabled() != null) {
             channel.setEnabled(request.enabled());
+        }
+        if (request.autopublishEnabled() != null) {
+            channel.setAutopublishEnabled(request.autopublishEnabled());
+        }
+        if (request.autopublishThreshold() != null) {
+            channel.setAutopublishThreshold(request.autopublishThreshold());
         }
         return toResponse(channelRepository.save(channel));
     }
@@ -96,6 +108,8 @@ public class ChannelService {
                 channel.getSlug(),
                 channel.getDescription(),
                 channel.isEnabled(),
+                channel.isAutopublishEnabled(),
+                channel.getAutopublishThreshold(),
                 channelRepository.countPostsByChannelId(channel.getId()),
                 channelRepository.countSocialAccountsByChannelId(channel.getId()),
                 channel.getCreatedAt(),

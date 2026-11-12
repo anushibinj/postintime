@@ -38,7 +38,7 @@ public class PublicPostController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create a post (JSON)",
-            description = "Create a post with title, optional caption, optional existing mediaId, and optional status (draft or ready)."
+            description = "Create a post with title, optional caption, optional existing mediaId, optional status (draft or ready), and optional autopublishScore (0-100). If the channel has autopublish on and the score reaches its threshold, the post is queued for publishing to the channel's webhook accounts."
     )
     @ApiResponse(
             responseCode = "201",
@@ -58,7 +58,7 @@ public class PublicPostController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create a post with media file",
-            description = "Multipart form: required title; optional caption, status, mediaId; optional media file (jpeg, png, gif, or webp). Field name for the file must be media."
+            description = "Multipart form: required title; optional caption, status, mediaId, autopublishScore (0-100); optional media file (jpeg, png, gif, or webp). Field name for the file must be media."
     )
     @ApiResponse(
             responseCode = "201",
@@ -75,8 +75,10 @@ public class PublicPostController {
             @RequestParam(required = false) String caption,
             @RequestParam(required = false) UUID mediaId,
             @RequestParam(required = false) String status,
+            @Parameter(description = "Optional autopublish score from 0 to 100 (0 when omitted). At or above the channel's threshold the post is queued for publishing.")
+            @RequestParam(required = false) Integer autopublishScore,
             @Parameter(description = "Image file. Form field name: media.")
             @RequestParam(value = "media", required = false) MultipartFile media) {
-        return postService.createPost(channelId, title, caption, mediaId, status, media);
+        return postService.createPost(channelId, title, caption, mediaId, status, autopublishScore, media);
     }
 }

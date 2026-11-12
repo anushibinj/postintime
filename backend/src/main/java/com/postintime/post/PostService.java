@@ -31,17 +31,20 @@ public class PostService {
     private final MediaService mediaService;
     private final PostTargetRepository postTargetRepository;
     private final BulkPublishItemRepository bulkPublishItemRepository;
+    private final BulkPublishService bulkPublishService;
 
     public PostService(PostRepository postRepository,
                        ChannelService channelService,
                        MediaService mediaService,
                        PostTargetRepository postTargetRepository,
-                       BulkPublishItemRepository bulkPublishItemRepository) {
+                       BulkPublishItemRepository bulkPublishItemRepository,
+                       BulkPublishService bulkPublishService) {
         this.postRepository = postRepository;
         this.channelService = channelService;
         this.mediaService = mediaService;
         this.postTargetRepository = postTargetRepository;
         this.bulkPublishItemRepository = bulkPublishItemRepository;
+        this.bulkPublishService = bulkPublishService;
     }
 
     static final int MAX_PAGE_SIZE = 100;
@@ -87,20 +90,31 @@ public class PostService {
         post.setTitle(request.title());
         post.setCaption(request.caption());
         post.setStatus(parseStatusRequired(request.status()));
+        post.setAutopublishScore(request.autopublishScore() == null ? 0 : request.autopublishScore());
         if (request.mediaId() != null) {
             post.setMedia(mediaService.getOwnedMedia(request.mediaId()));
         }
-        return toResponse(postRepository.save(post));
+        Post saved = postRepository.save(post);
+        // A post that scores at or above the channel's threshold goes straight into its publishing queue.
+        if (channel.accepts(saved.getAutopublishScore()) && bulkPublishService.autopublish(channel, saved)) {
+            saved.setStatus(PostStatus.READY);
+            saved.setAutopublished(true);
+            saved = postRepository.save(saved);
+        }
+        return toResponse(saved);
     }
 
     @Transactional
     public PostResponse createPost(UUID channelId, String title, String caption, UUID mediaId,
-                                   String status, MultipartFile mediaFile) {
+                                   String status, Integer autopublishScore, MultipartFile mediaFile) {
         if (title == null || title.isBlank()) {
             throw new BusinessException("VALIDATION_ERROR", "Title is required.");
         }
         if (title.length() > 300) {
             throw new BusinessException("VALIDATION_ERROR", "Title must be at most 300 characters.");
+        }
+        if (autopublishScore != null && (autopublishScore < 0 || autopublishScore > 100)) {
+            throw new BusinessException("VALIDATION_ERROR", "Autopublish score must be between 0 and 100.");
         }
         if (caption != null && caption.length() > 10000) {
             throw new BusinessException("VALIDATION_ERROR", "Caption must be at most 10000 characters.");
@@ -109,7 +123,7 @@ public class PostService {
         if (mediaFile != null && !mediaFile.isEmpty()) {
             resolvedMediaId = mediaService.upload(mediaFile).id();
         }
-        return createPost(channelId, new CreatePostRequest(title, caption, resolvedMediaId, status));
+        return createPost(channelId, new CreatePostRequest(title, caption, resolvedMediaId, status, autopublishScore));
     }
 
     @Transactional
@@ -176,6 +190,8 @@ public class PostService {
                 post.getCaption(),
                 mediaResponse,
                 post.getStatus().name().toLowerCase(),
+                post.getAutopublishScore(),
+                post.isAutopublished(),
                 new PublicationSummaryResponse(total, published, pending, failed),
                 targetSummaries,
                 bulkPublishItemRepository.findFirstByPostIdAndStatusIn(post.getId(), BulkPublishService.OPEN_STATUSES)

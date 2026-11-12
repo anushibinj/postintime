@@ -45,6 +45,8 @@ class Channel {
     required this.slug,
     this.description,
     required this.enabled,
+    this.autopublishEnabled = false,
+    this.autopublishThreshold = 80,
     required this.postCount,
     required this.socialAccountCount,
     required this.createdAt,
@@ -56,6 +58,12 @@ class Channel {
   final String slug;
   final String? description;
   final bool enabled;
+
+  /// Publish incoming posts on their own when their score reaches [autopublishThreshold].
+  final bool autopublishEnabled;
+
+  /// Minimum post score (0-100) that autopublishes.
+  final int autopublishThreshold;
   final int postCount;
   final int socialAccountCount;
   final DateTime createdAt;
@@ -67,6 +75,8 @@ class Channel {
     slug: json['slug'] as String? ?? '',
     description: json['description'] as String?,
     enabled: json['enabled'] as bool? ?? true,
+    autopublishEnabled: json['autopublishEnabled'] as bool? ?? false,
+    autopublishThreshold: (json['autopublishThreshold'] as num?)?.toInt() ?? 80,
     postCount: (json['postCount'] as num?)?.toInt() ?? 0,
     socialAccountCount: (json['socialAccountCount'] as num?)?.toInt() ?? 0,
     createdAt: _requiredDate(json['createdAt']),
@@ -152,6 +162,8 @@ class Post {
     this.caption,
     this.media,
     required this.status,
+    this.autopublishScore,
+    this.autopublished = false,
     this.publicationSummary,
     this.targets,
     this.bulkPublishScheduledAt,
@@ -165,6 +177,12 @@ class Post {
   final String? caption;
   final MediaInfo? media;
   final PostStatus status;
+
+  /// Score (0-100) the sender gave the post; null when it gave none.
+  final int? autopublishScore;
+
+  /// True when the post was queued for publishing because its score reached the channel's threshold.
+  final bool autopublished;
   final PublicationSummary? publicationSummary;
   final List<PostTargetSummary>? targets;
 
@@ -184,6 +202,8 @@ class Post {
       caption: json['caption'] as String?,
       media: media is Map<String, dynamic> ? MediaInfo.fromJson(media) : null,
       status: PostStatus.parse(json['status'] as String?),
+      autopublishScore: (json['autopublishScore'] as num?)?.toInt(),
+      autopublished: json['autopublished'] as bool? ?? false,
       publicationSummary: summary is Map<String, dynamic> ? PublicationSummary.fromJson(summary) : null,
       targets: targets is List
           ? targets.whereType<Map<String, dynamic>>().map(PostTargetSummary.fromJson).toList()

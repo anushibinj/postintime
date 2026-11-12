@@ -20,6 +20,10 @@ export interface Channel {
   slug: string;
   description?: string;
   enabled: boolean;
+  /** Publish incoming posts on their own when their score reaches the threshold. */
+  autopublishEnabled: boolean;
+  /** Minimum post score (0-100) that autopublishes. */
+  autopublishThreshold: number;
   postCount: number;
   socialAccountCount: number;
   createdAt: string;
@@ -58,6 +62,10 @@ export interface Post {
   caption?: string;
   media?: MediaInfo;
   status: PostStatus;
+  /** Score (0-100) the sender gave the post; absent when it gave none. */
+  autopublishScore?: number | null;
+  /** True when the post was queued for publishing because its score reached the channel's threshold. */
+  autopublished?: boolean;
   publicationSummary?: PublicationSummary;
   targets?: PostTargetSummary[];
   /** When the channel's bulk posting queue will post this; absent when not queued. */

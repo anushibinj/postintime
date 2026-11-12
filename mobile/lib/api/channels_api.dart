@@ -16,10 +16,22 @@ class ChannelsApi {
     return Channel.fromJson(json);
   }
 
-  Future<Channel> createChannel({required String name, required String slug, String? description}) async {
+  Future<Channel> createChannel({
+    required String name,
+    required String slug,
+    String? description,
+    bool? autopublishEnabled,
+    int? autopublishThreshold,
+  }) async {
     final json = await _client.post(
       '/api/v1/channels',
-      body: {'name': name, 'slug': slug, 'description': ?description},
+      body: {
+        'name': name,
+        'slug': slug,
+        'description': ?description,
+        'autopublishEnabled': ?autopublishEnabled,
+        'autopublishThreshold': ?autopublishThreshold,
+      },
     ) as Map<String, dynamic>;
     return Channel.fromJson(json);
   }
@@ -30,10 +42,19 @@ class ChannelsApi {
     String? slug,
     String? description,
     bool? enabled,
+    bool? autopublishEnabled,
+    int? autopublishThreshold,
   }) async {
     final json = await _client.patch(
       '/api/v1/channels/$channelId',
-      body: {'name': ?name, 'slug': ?slug, 'description': ?description, 'enabled': ?enabled},
+      body: {
+        'name': ?name,
+        'slug': ?slug,
+        'description': ?description,
+        'enabled': ?enabled,
+        'autopublishEnabled': ?autopublishEnabled,
+        'autopublishThreshold': ?autopublishThreshold,
+      },
     ) as Map<String, dynamic>;
     return Channel.fromJson(json);
   }
