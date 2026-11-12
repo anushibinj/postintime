@@ -144,6 +144,7 @@ Copy `.env.example` to `.env` and adjust values. For local development:
 - Backend uses Java 21 (`export JAVA_HOME` to JDK 21 if needed)
 - Frontend connects directly to `VITE_API_BASE_URL` (no Vite proxy). Media file URLs in API responses use `APPLICATION_ROOT_URL` (`app.base-url`); keep those two in sync with the published backend host port. List thumbnails request `GET .../media/files/...?size=64` (square JPEG via Thumbnailator; allowed size 16–512).
 - Expired JWT sessions are cleared in the browser and the user is sent to `/login`
+- Session JWTs last 7 days by default; override with `JWT_EXPIRATION_MS` in `.env` (milliseconds). A `.env` copied from an older example may still pin a shorter value
 - Personal API tokens are created in Settings and used as Bearer tokens for REST access
 - `GET /api/v1/public/channels` lists the authenticated user's channels and metadata (`Authorization: Bearer pit_…` or `X-Api-Key`)
 - `POST /api/v1/public/channels/{channelId}/posts` creates a post in that channel. JSON body: `{ "title", "caption", "mediaId", "status" }`. Multipart form: `title`, `caption`, `status`, and `media` (image file). Auth is the same API token.
