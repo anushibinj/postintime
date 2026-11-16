@@ -31,6 +31,19 @@ public final class FooterText {
         return value.replace("\r\n", LF).replace('\r', '\n').strip();
     }
 
+    /**
+     * Collapses CRLF/CR to LF, drops trailing spaces on each line and reduces any run of blank lines to a
+     * single blank line, so a post never has more than one empty line between paragraphs.
+     */
+    public static String collapseBlankLines(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\r\n", LF).replace('\r', '\n')
+                .replaceAll("[ \\t\\u00A0]+\\n", LF)
+                .replaceAll("\\n{3,}", "\n\n");
+    }
+
     /** The footer using the newline convention of {@code platform}. */
     public static String forPlatform(String footer, Platform platform) {
         String canonical = normalize(footer);
@@ -40,8 +53,8 @@ public final class FooterText {
 
     /** The caption followed by a blank line and the footer; the caption alone when there is no footer. */
     public static String appendTo(String caption, String footer, Platform platform) {
-        String base = caption == null ? "" : caption;
-        String formatted = forPlatform(footer, platform);
+        String base = collapseBlankLines(caption).stripTrailing();
+        String formatted = collapseBlankLines(forPlatform(footer, platform));
         if (formatted.isEmpty()) {
             return base;
         }
