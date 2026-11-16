@@ -26,6 +26,21 @@ class FooterTextTest {
     }
 
     @Test
+    void collapsesRunsOfBlankLinesToOne() {
+        assertThat(FooterText.collapseBlankLines("line 1\n\n\n\n\nline 2\n\n\nline 3"))
+                .isEqualTo("line 1\n\nline 2\n\nline 3");
+        assertThat(FooterText.collapseBlankLines("a\r\n \r\n\t\r\n\r\nb")).isEqualTo("a\n\nb");
+        assertThat(FooterText.collapseBlankLines("a\nb")).isEqualTo("a\nb");
+        assertThat(FooterText.collapseBlankLines(null)).isEmpty();
+    }
+
+    @Test
+    void appendedCaptionNeverHasMoreThanOneBlankLine() {
+        assertThat(FooterText.appendTo("a\n\n\n\nb\n\n\n", "f1\n\n\n\nf2", Platform.LINKEDIN))
+                .isEqualTo("a\n\nb\n\nf1\n\nf2");
+    }
+
+    @Test
     void leavesCaptionUntouchedWithoutFooter() {
         assertThat(FooterText.appendTo("Hello", "", Platform.WHATSAPP)).isEqualTo("Hello");
         assertThat(FooterText.appendTo(null, null, Platform.WHATSAPP)).isEmpty();
